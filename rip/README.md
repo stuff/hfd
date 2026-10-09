@@ -140,11 +140,12 @@ Autres outils :
 Hatari peut enregistrer la démo image par image, son compris. Cette build n'a pas libpng, il faut donc le codec BMP : l'AVI brut pèse environ 21 Go pour 16 000 VBL. `avisplit.py` le lit même si son en-tête est cassé au-delà de 4 Go.
 ```bash
 tools/schedule.py out/rec1 "9000:0x39,9150:0x50,9300:0x1c" "15990"
-tools/hrun.sh out/rec1 16000 "" "" --avirecord --avi-vcodec bmp --avi-file $PWD/out/rec1/demo.avi
+tools/hrun.sh out/rec1 16000 "" "" --frameskips 0 --avirecord --avi-vcodec bmp --avi-file $PWD/out/rec1/demo.avi
 tools/avisplit.py out/rec1/demo.avi out/rec1 && rm out/rec1/demo.avi
 ```
 On obtient l'intro complète, le menu (ESPACE au VBL 9000), BAS au VBL 9150 et RETURN au VBL 9300 (chargement de Just Spank It), à 50 Hz.
-L'image n de `video.mkv` correspond au VBL n. Le cadre fait 416×276, et l'écran ST commence en (48, 29).
+L'image n de `video.mkv` correspond au VBL n. `--frameskips 0` est indispensable : sinon, en mode accéléré, Hatari ne rafraîchit l'image qu'une VBL sur 6.
+`palscan.py` relit, VBL par VBL, la palette de chaque ligne à partir d'une image indexée connue. Le cadre fait 416×276, et l'écran ST commence en (48, 29).
 Le dossier `out/` n'est pas versionné.
 
 Remarque : la démo a besoin que le son soit émulé. Avec `--sound off`, elle se bloque au décompactage.

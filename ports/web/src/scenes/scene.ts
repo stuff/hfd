@@ -24,16 +24,16 @@ export interface Scene {
 }
 
 /**
- * Fade level for a palette fade made of steps of 6 VBLs, as the demo does it.
+ * Fade level for a palette fade as the demo does it: one level every 3 VBLs.
  * `steps` lists the levels (see fadeColor); before the first step the level is `before`,
  * after the last one it stays on the last.
  */
 export function fadeAt(t: number, steps: number[], before = steps[0]): number {
   if (t < 0) return before;
-  return steps[Math.min(steps.length - 1, Math.floor(t / 6))];
+  return steps[Math.min(steps.length - 1, Math.floor(t / 3))];
 }
 
-export const FADE_IN = [5, 3, 1, 0];
-export const FADE_IN_EVEN = [6, 4, 2, 0];
-export const FADE_OUT = [1, 3, 5, 7];
-export const FADE_OUT_EVEN = [2, 4, 6, 8];
+/** From black (level 7) to full colour, 21 VBLs. */
+export const FADE_IN = [7, 6, 5, 4, 3, 2, 1, 0];
+/** From full colour to black, 21 VBLs. */
+export const FADE_OUT = [0, 1, 2, 3, 4, 5, 6, 7];

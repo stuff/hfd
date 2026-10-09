@@ -41,7 +41,7 @@ const app: App = {
   authentic: true,
   go: (s) => (scene = s),
 };
-scene = new MenuScene(app, undefined, 6);
+scene = new MenuScene(app);
 
 const n = Number(vbls);
 const rgb = Buffer.alloc(n * FRAME_W * FRAME_H * 3);

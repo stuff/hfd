@@ -37,10 +37,10 @@ La référence est l'enregistrement image par image de la démo dans Hatari (voi
 `scripts/render.ts` fait tourner les scènes sans navigateur, et `scripts/compare.py` les compare pixel par pixel à la vidéo :
 
 ```bash
-npx vite-node scripts/render.ts -- /tmp/ours.rgb 1396 132:ArrowDown 276:Enter
+npx vite-node scripts/render.ts -- /tmp/ours.rgb 1396 127:ArrowDown 276:Enter
 python3 scripts/compare.py /tmp/ours.rgb ../../rip/out/rec1/video.mkv 9024
 ```
-Le VBL 0 du script correspond au VBL 9024 de la référence (ESPACE au VBL 9000). Le menu, le déplacement du curseur, RETURN, LOADING, DECRUNCHING et le retour au menu donnent **0 pixel de différence sur 1 396 images**.
+Le VBL 0 du script correspond au VBL 9024 de la référence (ESPACE au VBL 9000). Le menu, le déplacement du curseur, RETURN, LOADING, DECRUNCHING et le retour au menu donnent **0 pixel de différence sur 1 396 images, VBL par VBL**.
 
 Pour le son, `scripts/render-audio.ts` rend un module en WAV. Comparé à libopenmpt au même tempo, l'enveloppe corrèle entre 0,94 et 0,99. Seuls quelques passages d'*Act of Impulse* (vibrato et changement d'instrument sans note) descendent à 0,7–0,85.
 

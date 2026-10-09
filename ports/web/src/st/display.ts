@@ -122,3 +122,9 @@ export class Display {
     this.ctx.putImageData(this.image, 0, 0);
   }
 }
+
+/** '#aa8800' (as in the rip's JSON files, where every component is a multiple of 17) → 0xa80. */
+export function hex(c: string): number {
+  const v = parseInt(c.slice(1), 16);
+  return ((((v >> 16) & 255) / 17) << 8) | ((((v >> 8) & 255) / 17) << 4) | ((v & 255) / 17);
+}
