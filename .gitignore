@@ -1,0 +1,5 @@
+rip/tools/.build/
+__pycache__/
+out/
+node_modules/
+dist/

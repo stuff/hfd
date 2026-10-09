@@ -1,0 +1,19 @@
+VBL   280-  280  T00 S0 sec 1 (img off 000000) x  1 secs -> RAM 001004-001204 pc=e0585c
+VBL   396-  396  T00 S0 sec 8 (img off 000e00) x  1 secs -> RAM 000500-000700 pc=d6
+VBL   456-  456  T00 S0 sec 7 (img off 000c00) x  1 secs -> RAM 000200-000400 pc=526
+VBL   479-  521  T77 S1 sec 9 (img off 0c2c00) x 36 secs -> RAM 070000-074800 pc=2fc
+VBL   535-  717  T69 S0 sec 7 (img off 0ad400) x173 secs -> RAM 003e00-019800 pc=70634
+VBL   726-  960  T19 S1 sec 9 (img off 031c00) x234 secs -> RAM 025e00-043200 pc=70634
+VBL  9589- 9700  T00 S1 sec 5 (img off 001c00) x102 secs -> RAM 025e00-032a00 pc=128ec
+VBL 12578-12687  T05 S1 sec 7 (img off 00e800) x104 secs -> RAM 025e00-032e00 pc=128ec
+VBL 15602-15622  T11 S0 sec 1 (img off 01b800) x 11 secs -> RAM 025e00-027400 pc=128ec
+VBL 15622-15789  T11 S1 sec 1 (img off 01cc00) x168 secs -> RAM 027200-03c200 pc=128ec
+VBL 18551-18629  T31 S1 sec 3 (img off 04f000) x 79 secs -> RAM 025e00-02fc00 pc=128ec
+VBL 18629-18668  T35 S1 sec 1 (img off 058c00) x 40 secs -> RAM 02fa00-034a00 pc=128ec
+VBL 21569-21659  T37 S1 sec 1 (img off 05dc00) x 91 secs -> RAM 025e00-031400 pc=128ec
+VBL 21659-21770  T42 S0 sec 1 (img off 069000) x112 secs -> RAM 031200-03f200 pc=128ec
+VBL 24577-24697  T47 S1 sec 3 (img off 077000) x119 secs -> RAM 025e00-034c00 pc=128ec
+VBL 24697-24707  T53 S1 sec 1 (img off 085c00) x 11 secs -> RAM 034a00-036000 pc=128ec
+VBL 24707-24812  T54 S0 sec 1 (img off 087000) x106 secs -> RAM 035e00-043200 pc=128ec
+VBL 27581-27786  T59 S0 sec 7 (img off 094400) x200 secs -> RAM 025e00-03ee00 pc=128ec
+1589 sectors read

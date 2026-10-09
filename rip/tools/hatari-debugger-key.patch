@@ -1,0 +1,30 @@
+--- a/hatari-2.5.0/src/debug/debugui.c	2024-04-18 21:49:45.000000000 +0200
++++ b/hatari-2.5.0/src/debug/debugui.c	2026-10-09 17:27:28.468798074 +0200
+@@ -385,6 +385,15 @@
+ /**
+  * Command: Screenshot
+  */
++extern void IKBD_PressSTKey(uint8_t ScanCode, bool bPress);
++static int DebugUI_Key(int argc, char *argv[])
++{
++	if (argc != 3)
++		return DebugUI_PrintCmdHelp(argv[0]);
++	IKBD_PressSTKey(strtol(argv[1], NULL, 0), argv[2][0] == 'd');
++	return DEBUGGER_CMDDONE;
++}
++
+ static int DebugUI_Screenshot(int argc, char *argv[])
+ {
+ 	if (argc == 2)
+@@ -1037,6 +1046,11 @@
+ 	  "reset emulation",
+ 	  "<soft|hard>\n",
+ 	  false },
++	{ DebugUI_Key, NULL,
++	  "key", "",
++	  "press/release ST key scancode",
++	  "<scancode> <d|u>\n",
++	  false },
+ 	{ DebugUI_Screenshot, NULL,
+ 	  "screenshot", "",
+ 	  "save screenshot to given file",

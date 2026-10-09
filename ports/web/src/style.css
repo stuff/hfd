@@ -1,0 +1,20 @@
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: #000;
+  overflow: hidden;
+}
+
+body {
+  display: grid;
+  place-items: center;
+}
+
+/* The 416×276 ST frame, scaled to fit with square pixels. */
+#screen {
+  width: min(100vw, calc(100vh * 416 / 276));
+  aspect-ratio: 416 / 276;
+  image-rendering: pixelated;
+  touch-action: manipulation;
+}

@@ -1,0 +1,14 @@
+{
+ "file": "font8x8.bin",
+ "format": "44 glyphs x 8 bytes, 1 bit per pixel, MSB = leftmost pixel",
+ "first_char_code": 48,
+ "char_codes": "0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[",
+ "displayed_as": "0123456789:.(!)?\u25a0ABCDEFGHIJKLMNOPQRSTUVWXYZ-",
+ "text_encoding_note": "texts use ';'->'.', '<'->'(', '='->'!', '>'->')', '@'->block, '['->'-'; space = no glyph",
+ "cell": "glyph 8x8, drawn on a 10 px pitch in the text pages, plane 2 (colour 4)",
+ "ram": {
+  "shift_0_7_table": "0x1ec9e",
+  "shift_8_15_table": "0x2029e",
+  "layout": "per char: 8 shifts x 8 rows x 16-bit word (128 bytes)"
+ }
+}
