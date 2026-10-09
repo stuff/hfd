@@ -134,6 +134,9 @@ Autres outils :
 - `fdcmap.py` : carte des lectures disque à partir de `--trace fdc`.
 - `rdis.py` : désassembleur récursif, avec capstone dans `tools/.build/pylib`.
 - `modinfo.py`.
+- `widegrab.py` : reconstitue la version pleine largeur (416 px, bordures comprises) d'un écran qui dessine dans les bordures latérales, à partir d'une image de la référence et de l'image indexée.
+  C'est ainsi qu'ont été produits les `graphics/pictures/fullscreen/*_wide_indexed.png` : les filets de HIGH FIDELITY DREAMS débordent dans les bordures.
+- `fadescan.py` : donne, VBL par VBL, le niveau de fondu de chaque bande de lignes d'un écran. C'est ainsi qu'ont été mesurés les effets d'apparition de l'intro.
 - `avisplit.py` : convertit l'AVI brut de Hatari (voir ci-dessous) en une vidéo compacte sans perte (`video.mkv`, FFV1) et un `audio.wav`.
 
 ### Vidéo de référence (pour vérifier les portages)

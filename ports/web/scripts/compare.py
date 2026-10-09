@@ -14,7 +14,7 @@ raw = subprocess.run(['ffmpeg', '-v', 'error', '-i', sys.argv[2], '-vf',
                       f"select='between(n\\,{first}\\,{first + n - 1})'", '-vsync', '0',
                       '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'], capture_output=True, check=True).stdout
 ref = np.frombuffer(raw, np.uint8).reshape(-1, H, W, 3)[:n].copy()
-ref[:, 3:8, 403:413] = ours[:len(ref), 3:8, 403:413]  # drive LED
+ref[:, 2:9, 398:416] = ours[:len(ref), 2:9, 398:416]  # drive LED
 diff_dir = sys.argv[4] if len(sys.argv) > 4 else None
 runs, cur = [], None
 for i in range(len(ref)):

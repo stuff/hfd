@@ -1,17 +1,19 @@
 /**
  * Runs the scenes headless and writes raw RGB24 frames (416×276), to compare with
  * the Hatari reference recording (see compare.py).
- * usage: vite-node scripts/render.ts -- <out.rgb> <vbls> [vbl:key ...]
- * VBL 0 is the first VBL of the menu scene (it fades in from black after 6 VBLs).
+ * usage: vite-node scripts/render.ts -- <menu|intro> <out.rgb> <vbls> [vbl:key ...]
+ * menu: VBL 0 is the first VBL of the menu scene = reference VBL 9024.
+ * intro: VBL 0 is the ear screen's first VBL = reference VBL 546.
  */
 import { writeFileSync } from 'node:fs';
 import { Display, FRAME_H, FRAME_W } from '../src/st/display';
 import type { App, Scene } from '../src/scenes/scene';
 import { MenuScene } from '../src/scenes/menu';
+import { IntroScene } from '../src/scenes/intro';
 import { ENIGMA } from '../src/assets';
 import type { Music } from '../src/audio/music';
 
-const [out, vbls, ...events] = process.argv.slice(2).filter((a) => a !== '--');
+const [which, out, vbls, ...events] = process.argv.slice(2).filter((a) => a !== '--');
 const keys = new Map<number, string>();
 for (const e of events) {
   const [v, k] = e.split(':');
@@ -41,7 +43,7 @@ const app: App = {
   authentic: true,
   go: (s) => (scene = s),
 };
-scene = new MenuScene(app);
+scene = which === 'intro' ? new IntroScene(app) : new MenuScene(app);
 
 const n = Number(vbls);
 const rgb = Buffer.alloc(n * FRAME_W * FRAME_H * 3);

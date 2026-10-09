@@ -5,6 +5,7 @@ import { ST_VBL_HZ } from './audio/mod';
 import { Display, FRAME_H, FRAME_W, SCREEN_X, SCREEN_Y } from './st/display';
 import { drawText } from './st/text';
 import type { App, Scene } from './scenes/scene';
+import { IntroScene } from './scenes/intro';
 import { MenuScene } from './scenes/menu';
 
 const canvas = document.querySelector<HTMLCanvasElement>('#screen')!;
@@ -51,8 +52,11 @@ class StartScene implements Scene {
     if (this.starting) return;
     this.starting = true;
     await app.music.start();
-    await app.music.play(SONGS[ENIGMA].url);
-    app.go(new MenuScene(app, undefined, 6));
+    if (params.has('menu')) {
+      // Straight to the menu (development), with Enigma playing as after the intro.
+      await app.music.play(SONGS[ENIGMA].url);
+      app.go(new MenuScene(app));
+    } else app.go(new IntroScene(app));
   }
 }
 

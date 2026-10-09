@@ -16,7 +16,7 @@ export function drawText(d: Display, font: Uint8Array, text: string, y: number, 
     if (g >= 0)
       for (let r = 0; r < 8; r++) {
         const bits = font[g * 8 + r];
-        for (let b = 0; b < 8; b++) if (bits & (0x80 >> b)) d.pixels[(y + r) * SCREEN_W + px + b] = color;
+        for (let b = 0; b < 8; b++) if (bits & (0x80 >> b)) d.pixels[d.at(px + b, y + r)] = color;
       }
     px += pitch;
   }
