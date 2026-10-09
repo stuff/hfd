@@ -20,6 +20,8 @@ Commandes, comme dans la démo :
 
 Pour la souris et le tactile (ce n'est pas dans la démo) : un clic sur une page de texte, ou sur SELECT SONG dans le menu, fait comme ESPACE. Un survol déplace le curseur, et un clic ou un tap sur un titre le lance.
 
+Plein écran : double-clic (ou double tap), ou la touche F. Pour qu'un double-clic ne compte pas aussi comme un clic, l'action d'un clic simple attend 250 ms.
+
 ## État
 - [x] Menu SELECT SONG, curseur, entrée en lecture, fondus
 - [x] LOADING / DECRUNCHING + nom du morceau, fondu sonore

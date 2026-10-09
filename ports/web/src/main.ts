@@ -79,8 +79,14 @@ function frame(now: number): void {
 addEventListener('keydown', (e) => {
   if (e.repeat && e.code !== 'ArrowUp' && e.code !== 'ArrowDown') return;
   if (['ArrowUp', 'ArrowDown', 'Space', 'Enter'].includes(e.code)) e.preventDefault();
-  scene.key?.(e.code);
+  if (e.code === 'KeyF' && !(scene instanceof StartScene)) toggleFullscreen();
+  else scene.key?.(e.code);
 });
+
+function toggleFullscreen(): void {
+  if (document.fullscreenElement) void document.exitFullscreen();
+  else document.documentElement.requestFullscreen?.().catch(() => {});
+}
 
 function toScreen(e: PointerEvent): [number, number] {
   const r = canvas.getBoundingClientRect();
@@ -89,7 +95,29 @@ function toScreen(e: PointerEvent): [number, number] {
 canvas.addEventListener('pointermove', (e) => {
   if (e.pointerType === 'mouse') scene.pointer?.(...toScreen(e), false);
 });
-canvas.addEventListener('pointerup', (e) => scene.pointer?.(...toScreen(e), true));
+// A double click (or double tap) toggles full screen. A single click waits for the
+// double-click delay first, so that a double click doesn't also act as a click.
+const DOUBLE_CLICK_MS = 250;
+let pendingClick: number | undefined;
+canvas.addEventListener('pointerup', (e) => {
+  if (e.button !== 0) return;
+  const pos = toScreen(e);
+  if (scene instanceof StartScene) {
+    scene.pointer(...pos, true); // must run inside the gesture: it starts the audio
+    return;
+  }
+  if (pendingClick !== undefined) {
+    clearTimeout(pendingClick);
+    pendingClick = undefined;
+    toggleFullscreen();
+    return;
+  }
+  pendingClick = window.setTimeout(() => {
+    pendingClick = undefined;
+    scene.pointer?.(...pos, true);
+  }, DOUBLE_CLICK_MS);
+});
+canvas.addEventListener('dblclick', (e) => e.preventDefault());
 
 loadFont().then((font) => {
   scene = new StartScene(font);
