@@ -1,7 +1,8 @@
 import { images, SONGS } from '../assets';
 import { type Display, SCREEN_W, SCREEN_Y } from '../st/display';
-import { type App, type Scene, fadeAt, FADE_IN } from './scene';
+import { type App, type Scene, fadeAt, FADE_IN, FADE_OUT } from './scene';
 import { LoadingScene } from './loading';
+import { TextPageScene } from './textpage';
 
 /** Menu layout, in screen lines: entry k is 20 lines tall at ENTRY_Y + k × ENTRY_STEP. */
 export const ENTRY_Y = 37;
@@ -69,19 +70,25 @@ export function entryAt(y: number): number {
 
 export class MenuScene implements Scene {
   private t = 0;
+  /** VBL at which SPACE was pressed (back to the text pages), -1 if not. */
+  private leaving = -1;
 
   constructor(private readonly app: App, private readonly fadeIn: number[] = FADE_IN, private readonly delay = 0) {}
 
   vbl(): void {
     this.t++;
+    if (this.leaving >= 0 && this.t - this.leaving >= 24) {
+      this.app.go((this.app.textPage ?? new TextPageScene(this.app)).resume());
+    }
   }
 
   draw(d: Display): void {
-    drawMenu(d, this.app.cursor, this.app.playing, fadeAt(this.t - this.delay, this.fadeIn, 8));
+    const fade = this.leaving >= 0 ? fadeAt(this.t - this.leaving, FADE_OUT, 0) : fadeAt(this.t - this.delay, this.fadeIn, 8);
+    drawMenu(d, this.app.cursor, this.app.playing, fade);
   }
 
   private get ready(): boolean {
-    return this.t - this.delay >= this.fadeIn.length * 6;
+    return this.leaving < 0 && this.t - this.delay >= this.fadeIn.length * 3;
   }
 
   key(code: string): void {
@@ -90,10 +97,13 @@ export class MenuScene implements Scene {
     if (code === 'ArrowUp') this.app.cursor = Math.max(0, this.app.cursor - 1);
     else if (code === 'ArrowDown') this.app.cursor = Math.min(n - 1, this.app.cursor + 1);
     else if (code === 'Enter' || code === 'NumpadEnter') this.select();
+    else if (code === 'Space') this.leaving = this.t; // back to the text pages, as in the demo
   }
 
   pointer(_x: number, y: number, click: boolean): void {
     if (!this.ready) return;
+    // Not in the demo: for mice and fingers, a click on SELECT SONG does what SPACE does.
+    if (click && y < ENTRY_Y - 4) { this.key('Space'); return; }
     const k = entryAt(y);
     if (k < 0) return;
     this.app.cursor = k;

@@ -38,6 +38,8 @@ await page.keyboard.press('ArrowUp');
 await page.keyboard.press('Enter');
 await shot('8_loading', 4000);
 await shot('9_menu_new_song', 6000);
+await page.keyboard.press('Space');
+await shot('10_back_to_text', 3000);
 console.log(errors.length ? errors.join('\n') : 'no console errors');
 await browser.close();
 server.httpServer.close();

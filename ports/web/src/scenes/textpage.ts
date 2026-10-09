@@ -361,7 +361,16 @@ export class TextPageScene implements Scene {
   private t = 0;
   private leaving = -1;
 
-  constructor(private readonly app: App, private readonly tick: () => TickInfo | null = () => app.music.current()) {}
+  constructor(private readonly app: App, private readonly tick: () => TickInfo | null = () => app.music.current()) {
+    app.textPage = this;
+  }
+
+  /** Back from the menu: the spreader carries on where it stopped, fading in again. */
+  resume(): Scene {
+    this.t = 0;
+    this.leaving = -1;
+    return this;
+  }
 
   vbl(): void {
     this.t++;

@@ -10,6 +10,8 @@ export interface App {
   cursor: number;
   /** Original disk loading/decrunching durations instead of short ones. */
   authentic: boolean;
+  /** The text pages, kept while in the menu: SPACE in the menu resumes them where they were. */
+  textPage?: Scene & { resume(): Scene };
   go(scene: Scene): void;
 }
 

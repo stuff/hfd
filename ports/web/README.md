@@ -14,7 +14,11 @@ Paramètres d'URL :
 - `?menu` : saute l'intro et va directement au menu (pour le développement).
 - `?debug` : expose l'application dans la console sous `hfd`.
 
-Commandes : ESPACE (ou un clic) quitte les pages de texte pour le menu. Dans le menu, ↑ / ↓ pour choisir, RETURN pour lancer le morceau. À la souris, survol puis clic ; au doigt, un tap.
+Commandes, comme dans la démo :
+- ESPACE fait passer des pages de texte au menu, et du menu aux pages de texte. Celles-ci reprennent là où elles s'étaient arrêtées, et la musique continue.
+- Dans le menu, ↑ / ↓ pour choisir, RETURN pour lancer le morceau.
+
+Pour la souris et le tactile (ce n'est pas dans la démo) : un clic sur une page de texte, ou sur SELECT SONG dans le menu, fait comme ESPACE. Un survol déplace le curseur, et un clic ou un tap sur un titre le lance.
 
 ## État
 - [x] Menu SELECT SONG, curseur, entrée en lecture, fondus
