@@ -1,3 +1,8 @@
+declare module '*?bytes' {
+  const bytes: Uint8Array;
+  export default bytes;
+}
+
 declare module '*?indexed' {
   const img: { width: number; height: number; data: Uint8Array };
   export default img;

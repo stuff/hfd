@@ -137,6 +137,14 @@ Autres outils :
 - `widegrab.py` : reconstitue la version pleine largeur (416 px, bordures comprises) d'un écran qui dessine dans les bordures latérales, à partir d'une image de la référence et de l'image indexée.
   C'est ainsi qu'ont été produits les `graphics/pictures/fullscreen/*_wide_indexed.png` : les filets de HIGH FIDELITY DREAMS débordent dans les bordures.
 - `fadescan.py` : donne, VBL par VBL, le niveau de fondu de chaque bande de lignes d'un écran. C'est ainsi qu'ont été mesurés les effets d'apparition de l'intro.
+- `palscan.py`, `fadescan.py` et `widegrab.py` : voir plus haut.
+- `extracted/textpage/` : la RAM de $12000 à $25B00 juste avant les pages de texte (VBL 5280), utilisée telle quelle par le portage web.
+  On y trouve aussi le profil CPU de Hatari sur 300 VBL de pages de texte : chaque instruction exécutée, avec son nombre d'exécutions.
+  `extracted/disasm/textpage_4000.s` est le désassemblage obtenu en prenant toutes ces adresses comme points d'entrée.
+  Les pages de texte fonctionnent ainsi :
+  - les 4 bandes sont des rasters précalculés : 12 interruptions Timer B, dont les couleurs et les hauteurs sont lues dans des enregistrements de 26 octets, parcourus par un script ;
+  - le text-spreader fait voler 33 lettres de la bulle jusqu'à leur place, en 64 VBL ;
+  - les analyseurs affichent des rayures sur les plans 3 et 0, relancées au volume de la voie.
 - `avisplit.py` : convertit l'AVI brut de Hatari (voir ci-dessous) en une vidéo compacte sans perte (`video.mkv`, FFV1) et un `audio.wav`.
 
 ### Vidéo de référence (pour vérifier les portages)

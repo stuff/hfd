@@ -96,6 +96,8 @@ class Channel {
   note = 0;
   cmd = 0;
   param = 0;
+  /** The current row has a note or an instrument for this channel. */
+  noteOrIns = false;
   portaTarget = 0;
   portaSpeed = 0;
   vibPos = 0; vibSpeed = 0; vibDepth = 0; vibWave = 0;
@@ -138,7 +140,21 @@ export interface TickInfo {
   frame: number;
   position: number;
   row: number;
-  channels: { volume: number; period: number; peak: number; triggered: boolean; sample: number }[];
+  /** This tick read a new row (tick 0). */
+  rowRead: boolean;
+  channels: {
+    /** Volume heard (tremolo included), 0 when silent. */
+    volume: number;
+    /** Channel volume as the effects set it (what the demo's voice analysers read). */
+    baseVolume: number;
+    period: number;
+    peak: number;
+    triggered: boolean;
+    sample: number;
+    /** Effect command and whether the row has a note or instrument, for the current row. */
+    cmd: number;
+    noteOrIns: boolean;
+  }[];
 }
 
 export class Replayer {
@@ -220,17 +236,19 @@ export class Replayer {
 
   private doTick(): void {
     if (this.fadeStep) this.master = Math.max(0, this.master - this.fadeStep);
-    if (this.tick === 0 && this.delayRepeat === 0) this.readRow();
+    const rowRead = this.tick === 0 && this.delayRepeat === 0;
+    if (rowRead) this.readRow();
     else for (const ch of this.ch) this.tickEffects(ch);
     for (const ch of this.ch) {
       if (ch.outPeriod > 0 && ch.outPeriod < 113) ch.outPeriod = 113;
     }
     if (this.onTick) {
       this.onTick({
-        frame: this.frame, position: this.position, row: this.row,
+        frame: this.frame, position: this.position, row: this.row, rowRead,
         channels: this.ch.map((ch) => ({
-          volume: ch.playing ? ch.outVolume : 0, period: ch.outPeriod, peak: ch.peak,
+          volume: ch.playing ? ch.outVolume : 0, baseVolume: ch.volume, period: ch.outPeriod, peak: ch.peak,
           triggered: ch.triggered, sample: ch.sample ? this.mod.samples.indexOf(ch.sample) + 1 : 0,
+          cmd: ch.cmd, noteOrIns: ch.noteOrIns,
         })),
       });
     }
@@ -268,6 +286,7 @@ export class Replayer {
       const period = ((b0 & 0x0f) << 8) | b1;
       ch.cmd = b2 & 0x0f;
       ch.param = b3;
+      ch.noteOrIns = ins > 0 || period > 0;
       const x = ch.param >> 4, y = ch.param & 15;
 
       if (ins > 0 && ins <= 31) {

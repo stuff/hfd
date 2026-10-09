@@ -14,14 +14,14 @@ Paramètres d'URL :
 - `?menu` : saute l'intro et va directement au menu (pour le développement).
 - `?debug` : expose l'application dans la console sous `hfd`.
 
-Commandes : ↑ / ↓ pour choisir, RETURN pour lancer le morceau. À la souris, survol puis clic ; au doigt, un tap.
+Commandes : ESPACE (ou un clic) quitte les pages de texte pour le menu. Dans le menu, ↑ / ↓ pour choisir, RETURN pour lancer le morceau. À la souris, survol puis clic ; au doigt, un tap.
 
 ## État
 - [x] Menu SELECT SONG, curseur, entrée en lecture, fondus
 - [x] LOADING / DECRUNCHING + nom du morceau, fondu sonore
 - [x] Lecteur MOD (AudioWorklet)
 - [x] Intro : écran de l'oreille (LOADING / DECRUNCHING pulsés), logos AN AURA PRODUCTION / HIGH FIDELITY DREAMS (filets qui glissent dans les bordures) / CODE AND DESIGN AEON
-- [ ] Pages de texte : text-spreader, 4 bandes en rotation avec analyseurs de voies, rasters
+- [x] Pages de texte : text-spreader, 4 bandes « vectorielles » (rasters), analyseurs de voies, fondus
 
 ## Comment c'est fait
 - **`src/st/display.ts`** : un écran ST virtuel cadré comme les captures de Hatari (416×276, bordures comprises, écran en (48, 29)).
@@ -31,6 +31,7 @@ Commandes : ↑ / ↓ pour choisir, RETURN pour lancer le morceau. À la souris,
 - **`src/audio/mod.ts`** : un replay ProTracker sans dépendance (il tourne dans l'AudioWorklet comme dans Node).
   Il mixe comme Paula, sans interpolation, avec les voies 1+4 à gauche et 2+3 à droite. Les ticks vont à 50,05 Hz, la fréquence VBL du ST, comme le replay de la démo.
   Il remonte l'état de chaque voie à chaque tick (volume, période, crête, déclenchement), pour les analyseurs.
+- **`src/scenes/textpage.ts`** : le port du code 68000 des pages de texte (rasters en $12A36, spreader en $1E552, analyseurs en $1E250). Il émule les deux écrans en plans de bits du ST et la chaîne de 12 interruptions Timer B. Il travaille sur une copie de la RAM de l'ST ($12000–$25B00, dans `rip/extracted/textpage/`), lue et modifiée aux adresses d'origine : script et enregistrements des rasters, tables de couleurs, fonte et bulle pré-décalées, chemin de la bulle, texte, 33 lettres en vol.
 - **`src/scenes/`** : une scène par écran. Tout avance par VBL (1/50 s), avec des durées mesurées dans l'enregistrement de référence.
 - Le plugin Vite de `vite.config.ts` transforme `…_indexed.png?indexed` en indices de palette bruts au moment du build.
 
@@ -48,6 +49,14 @@ python3 scripts/compare.py /tmp/menu.rgb ../../rip/out/rec1/video.mkv 9024
 - **Menu** : la VBL 0 correspond à la VBL 9024 (ESPACE au VBL 9000). Le menu, le déplacement du curseur, RETURN, LOADING, DECRUNCHING et le retour au menu donnent **0 pixel de différence sur 1 396 images**.
 
 Ces deux comparaisons se font VBL par VBL.
+
+- **Pages de texte** :
+  ```bash
+  ENIGMA_TICKS=2471 npx vite-node scripts/render.ts -- text /tmp/text.rgb 600
+  python3 scripts/compare.py /tmp/text.rgb ../../rip/out/rec1/video.mkv 5295
+  ```
+  Le texte, la bulle, les lettres en vol et les bandes sont identiques à la référence. Les analyseurs, eux, dépendent de l'instant exact de la musique.
+  Or Hatari ne la rejoue pas exactement au même moment d'une exécution à l'autre : deux exécutions ont montré 2 lignes de partition d'écart. La logique des analyseurs a donc été validée sur les niveaux lus en RAM (mêmes valeurs que l'ST), pas à l'image près.
 
 Pour le son, `scripts/render-audio.ts` rend un module en WAV. Comparé à libopenmpt au même tempo, l'enveloppe corrèle entre 0,94 et 0,99. Seuls quelques passages d'*Act of Impulse* (vibrato et changement d'instrument sans note) descendent à 0,7–0,85.
 

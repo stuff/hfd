@@ -1,7 +1,7 @@
 import { ENIGMA, images, pictureMeta, SONGS } from '../assets';
 import { type Display, fadeColor, SCREEN_Y } from '../st/display';
 import type { App, Scene } from './scene';
-import { MenuScene } from './menu';
+import { TextPageScene } from './textpage';
 
 /**
  * The intro, from the loading screen (the ear) to the last logo. Its clock counts VBLs
@@ -15,7 +15,7 @@ const MUSIC = 2836;
 const AURA = 3169, AURA_OUT = 3763;
 const HFD_RULES = 3798, HFD_WORDS = 3972, HFD_OUT = 4560;
 const AEON = 4704, AEON_OUT = 5256;
-export const INTRO_END = 5299; // the text pages start here
+export const INTRO_END = 5295; // the text pages' first VBL
 
 const BLACK = new Array(16).fill(0);
 
@@ -65,7 +65,7 @@ export class IntroScene implements Scene {
     this.v++;
     if (!this.app.authentic) this.v += SHORT_SKIPS.get(this.v) ?? 0;
     if (this.v === MUSIC) void this.app.music.play(SONGS[ENIGMA].url);
-    if (this.v >= INTRO_END) this.app.go(new MenuScene(this.app));
+    if (this.v >= INTRO_END) this.app.go(new TextPageScene(this.app));
   }
 
   draw(d: Display): void {

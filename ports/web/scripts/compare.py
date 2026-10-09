@@ -32,4 +32,5 @@ for a, b, bad in runs:
         d = np.zeros_like(ref[a]); d[m] = (255, 0, 255)
         Image.fromarray(np.concatenate([ref[a], ours[a], d], 1)).save(f'{diff_dir}/diff_{first + a}.png')
 total = sum((b - a + 1) for a, b, bad in runs if bad)
-print(f'{len(ref)} frames compared, {total} with differences')
+pixels = sum((b - a + 1) * bad for a, b, bad in runs)
+print(f'{len(ref)} frames compared, {total} with differences ({pixels} differing pixels in all)')
