@@ -40,7 +40,7 @@ On Linux, SDL needs the development packages of the display and sound systems. O
 sudo apt install cmake ninja-build libasound2-dev libpulse-dev libpipewire-0.3-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxtst-dev libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev libwayland-dev wayland-protocols libdecor-0-dev
 ```
 
-On macOS, a universal build: `-DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0`.
+On macOS, the compiler comes with Xcode's command line tools (`xcode-select --install`) and CMake with Homebrew (`brew install cmake`). For a universal build: `-DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0`.
 
 ## How it works
 Each file is the port of its web counterpart and keeps its names and comments. See [the web port's README](../web/README.md) for how each part works.
@@ -54,6 +54,7 @@ Each file is the port of its web counterpart and keeps its names and comments. S
 | `src/intro.c`, `menu.c`, `loading.c`, `textpage.c` | `src/scenes/*.ts` |
 | `src/main.c` | `src/main.ts`: window, input, VBL loop |
 | `tools/embed.py` | the `?indexed` plugin in `vite.config.ts`: PNG → palette indices, JSON palettes, modules |
+| `tools/icon.py` | (native only) the icon: the loading screen's ear on its blue, in pixel art, as `.icns` (macOS bundle), `.ico` (Windows resources) and RGBA pixels (the window on Linux) |
 
 Differences with the web port:
 - There is no "click or press a key" screen (browsers need a gesture before playing sound): the program starts on the intro.

@@ -233,6 +233,14 @@ static int run(bool authentic, bool menu) {
     return 1;
   }
   SDL_SetWindowMinimumSize(window, FRAME_W, FRAME_H);
+#if !defined(SDL_PLATFORM_WINDOWS) && !defined(SDL_PLATFORM_APPLE)
+  /* Windows takes the icon from the executable's resources, macOS from the bundle. */
+  SDL_Surface *icon = SDL_CreateSurfaceFrom(ICON_SIZE, ICON_SIZE, SDL_PIXELFORMAT_RGBA32, (void *)ICON_RGBA, ICON_SIZE * 4);
+  if (icon) {
+    SDL_SetWindowIcon(window, icon);
+    SDL_DestroySurface(icon);
+  }
+#endif
   SDL_SetRenderVSync(renderer, 1);
   int vsync = 0;
   SDL_GetRenderVSync(renderer, &vsync);

@@ -24,7 +24,8 @@ if(NOT SDL3_FOUND)
   set(SDL_EXAMPLES OFF CACHE BOOL "" FORCE)
   FetchContent_Declare(SDL3
     URL https://github.com/libsdl-org/SDL/releases/download/release-3.4.18/SDL3-3.4.18.tar.gz
-    URL_HASH SHA256=9c75cf16330322c217dedd2e0609f1124f1b54b8633e763467b4684d0f4334a3)
+    URL_HASH SHA256=9c75cf16330322c217dedd2e0609f1124f1b54b8633e763467b4684d0f4334a3
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
   FetchContent_MakeAvailable(SDL3)
 endif()
 
@@ -43,9 +44,27 @@ add_custom_command(
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tools/embed.py ${RIP_DATA}
   COMMENT "Embedding the demo's data from rip/")
 
+# The icon, drawn from the loading screen's ear (see tools/icon.py).
+set(GEN ${CMAKE_CURRENT_BINARY_DIR}/gen)
+add_custom_command(
+  OUTPUT ${GEN}/icon.c ${GEN}/hfd.icns ${GEN}/hfd.ico ${GEN}/hfd.rc
+  COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/tools/icon.py ${RIP} ${GEN}
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tools/icon.py ${CMAKE_CURRENT_SOURCE_DIR}/tools/embed.py
+    ${RIP}/graphics/pictures/loading_screen_indexed.png ${RIP}/graphics/pictures/loading_screen.json
+  COMMENT "Drawing the icon")
+set(ICON_SOURCES ${GEN}/icon.c)
+if(WIN32)
+  # Windows: in the executable's resources, where SDL also finds it for the window.
+  list(APPEND ICON_SOURCES ${GEN}/hfd.rc)
+  set_source_files_properties(${GEN}/hfd.rc PROPERTIES OBJECT_DEPENDS ${GEN}/hfd.ico)
+elseif(APPLE)
+  list(APPEND ICON_SOURCES ${GEN}/hfd.icns)
+  set_source_files_properties(${GEN}/hfd.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+endif()
+
 add_executable(hfd WIN32 MACOSX_BUNDLE
   src/main.c src/display.c src/mod.c src/music.c src/pacing.c src/scene.c
-  src/intro.c src/menu.c src/loading.c src/textpage.c ${ASSETS_C})
+  src/intro.c src/menu.c src/loading.c src/textpage.c ${ASSETS_C} ${ICON_SOURCES})
 target_include_directories(hfd PRIVATE src)
 target_link_libraries(hfd PRIVATE SDL3::SDL3)
 if(NOT MSVC)
@@ -57,6 +76,7 @@ if(APPLE)
   set_target_properties(hfd PROPERTIES
     OUTPUT_NAME "High Fidelity Dreams"
     MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/platform/Info.plist.in
+    MACOSX_BUNDLE_ICON_FILE hfd.icns
     MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
     MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION})
 endif()
