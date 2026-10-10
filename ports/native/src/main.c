@@ -233,14 +233,22 @@ static int run(bool authentic, bool menu) {
     return 1;
   }
   SDL_SetWindowMinimumSize(window, FRAME_W, FRAME_H);
-#if !defined(SDL_PLATFORM_WINDOWS) && !defined(SDL_PLATFORM_APPLE)
-  /* Windows takes the icon from the executable's resources, macOS from the bundle. */
+  /* Windows takes the icon from the executable's resources. On macOS, the Finder takes
+     it from the bundle's .icns, but the Dock and Cmd-Tab show the running app's icon,
+     which AppKit didn't pick up from it: it is set from the bundle's icon.png. */
+#if defined(SDL_PLATFORM_MACOS)
+  char icon_path[4096];
+  SDL_snprintf(icon_path, sizeof icon_path, "%sicon.png", SDL_GetBasePath());
+  SDL_Surface *icon = SDL_LoadPNG(icon_path);
+#elif !defined(SDL_PLATFORM_WINDOWS)
   SDL_Surface *icon = SDL_CreateSurfaceFrom(ICON_SIZE, ICON_SIZE, SDL_PIXELFORMAT_RGBA32, (void *)ICON_RGBA, ICON_SIZE * 4);
+#else
+  SDL_Surface *icon = NULL;
+#endif
   if (icon) {
     SDL_SetWindowIcon(window, icon);
     SDL_DestroySurface(icon);
   }
-#endif
   SDL_SetRenderVSync(renderer, 1);
   int vsync = 0;
   SDL_GetRenderVSync(renderer, &vsync);
