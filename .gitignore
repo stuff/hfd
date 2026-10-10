@@ -4,3 +4,5 @@ out/
 node_modules/
 dist/
 ports/native/build/
+ports/amiga/build/
+ports/amiga/tools/.build/
