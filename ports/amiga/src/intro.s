@@ -15,6 +15,7 @@ HFD_WORDS		equ	3972
 HFD_OUT			equ	4560
 AEON			equ	4704
 AEON_OUT		equ	5256
+INTRO_END		equ	5295		; the text pages' first VBL
 
 ; The screens, and the Copper buffers' screen before the first frame.
 SCREEN_BLACK	equ	0
@@ -72,6 +73,8 @@ intro_frame:
 	bne.s	.loaded
 	sub.w	#56,d0
 .loaded:
+	cmp.w	#INTRO_END+1,d0
+	beq	textpage_start		; the text pages take over (INTRO_END itself is black)
 	move.w	d0,v_vbl(a5)
 	cmp.w	#MUSIC,d0
 	bne.s	.music

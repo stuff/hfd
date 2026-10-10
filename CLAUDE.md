@@ -7,7 +7,7 @@ Study and ports of the Atari ST music disk *High Fidelity Dreams* (Aura, 1992). 
 - `rip/SPEC.md`: **the demo's behaviour**, measured and platform-independent (VBL timings, fades, menu, text pages, replay, Amiga and Windows/Mac notes). Read it before any port.
 - `rip/README.md`: the extraction (disk, music, graphics, 68000 code) and the Hatari tools.
 - `ports/web/README.md`: the web port (complete), its architecture and its tests.
-- `ports/amiga/README.md`: the Amiga port (68000 assembly): the intro is done, verified frame by frame in vAmiga against the reference video. The Kickstart 1.3 ROM isn't versioned.
+- `ports/amiga/README.md`: the Amiga port (68000 assembly): the intro and the text pages are done, verified frame by frame in vAmiga against the reference video (and the web port's render for the analysers). The Kickstart 1.3 ROM isn't versioned.
 - `ports/native/README.md`: the native port (C + SDL3, Windows/Linux/macOS), a transcription of the web port. `ports/native/scripts/check.sh` checks it byte for byte against the web port: any change to the web port's logic must be carried over to it.
 
 ## Method

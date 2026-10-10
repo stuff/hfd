@@ -31,7 +31,11 @@ $(B)/defines: FORCE
 	@mkdir -p $(B)
 	@echo '$(DEFINES)' | cmp -s - $@ || echo '$(DEFINES)' > $@
 
-$(B)/main.bin: src/main.s src/intro.s src/loader.s src/hardware.i src/memory.i $(B)/ptplayer.asm $(B)/intro.i $(B)/module.mod $(B)/defines
+$(B)/textpage.bin: $(RIP)/extracted/textpage/ram_012000_025b00.bin
+	@mkdir -p $(B)
+	cp $< $@
+
+$(B)/main.bin: src/main.s src/intro.s src/textpage.s src/loader.s src/hardware.i src/memory.i $(B)/ptplayer.asm $(B)/intro.i $(B)/module.mod $(B)/textpage.bin $(B)/defines
 	$(VASM) $(DEFINES) -o $@ $<
 	$(PYTHON) -c "import sys; p=sys.argv[1]; d=open(p,'rb').read(); open(p,'wb').write(d.ljust(-(-len(d)//512)*512, b'\0'))" $@
 

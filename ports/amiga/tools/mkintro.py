@@ -249,6 +249,12 @@ def pulse(k: int) -> int:
     return (r * 2) << 8 | (g * 2) << 4 | b * 2
 
 
+# The text pages' colours: an STE palette word (odd nibble order) to $rgb, for all 4096.
+ste = lambda n: (n & 7) << 1 | n >> 3
+(out / 'ste_colors.raw').write_bytes(b''.join(
+    (ste(w >> 8 & 15) << 8 | ste(w >> 4 & 15) << 4 | ste(w & 15)).to_bytes(2, 'big') for w in range(4096)))
+
+
 def words(label: str, values) -> str:
     rows = [values[i:i + 8] for i in range(0, len(values), 8)]
     return label + ':\n' + ''.join('\tdc.w\t' + ','.join(f'${v:03x}' for v in row) + '\n' for row in rows)

@@ -4,8 +4,9 @@
 ; code is PC-relative, and a5 points to the variables (BSS). The program then loads its
 ; second part itself (loader.s), while the ear screen shows.
 ;
-; Each VBL, the level 3 interrupt plays the music, then computes the next frame (intro.s)
-; into the Copper list that isn't shown, and makes it the next one.
+; Each VBL, the level 3 interrupt plays the music, then computes the next frame of the
+; intro (intro.s) into the Copper list that isn't shown, and makes it the next one. For
+; the text pages (textpage.s), it computes the frame it shows, then plays the music.
 
 VBLANK_MUSIC	equ	1		; ptplayer: _mt_music is called from our VBL interrupt
 
@@ -31,6 +32,23 @@ v_loaded	rs.b	1		; non-zero: the second part is loaded
 		rs.b	1
 v_load_from	rs.l	1		; loader.s
 v_load_to	rs.l	1
+v_mode		rs.b	1		; 0: the intro, non-zero: the text pages
+v_tick_valid	rs.b	1		; non-zero: v_tick holds the replay's last tick
+v_tick_row	rs.b	1		; non-zero: that tick read a new row
+		rs.b	1
+v_tick		rs.l	4		; each channel: note or instrument.b, effect.b, volume.w
+v_tp_delta	rs.l	1		; textpage.s: the RAM image's address - $12000
+v_tp_ste	rs.l	1		; the STE colour table
+v_tp_t		rs.w	1		; VBLs of the text pages
+v_tp_text	rs.w	1		; the text colour
+v_tp_carry0	rs.w	1		; colours 0 and 1 above the first raster
+v_tp_carry1	rs.w	1
+v_tp_first	rs.b	1		; the first raster's line
+		rs.b	1
+v_tp_row	rs.l	8		; an analyser's line
+v_tp_list	rs.l	1		; this VBL's erase list
+v_tp_erase	rs.b	2*ERASE_SIZE	; the screens' erase lists
+v_tp_copper	rs.b	TP_COPPER_SIZE
 v_copper	rs.b	2*COPPER_SIZE	; the two Copper buffers
 v_mfm		rs.w	MFM_WORDS	; a track as read from the disk
 v_hfd		rs.b	32000		; the second buffer of HIGH FIDELITY DREAMS
@@ -59,7 +77,7 @@ start:
 	sub.l	a0,a0			; vector base: 0 on a 68000
 	moveq	#1,d0			; PAL
 	bsr	_mt_install
-	move.w	#$8380,DMACON(a6)	; DMAEN, BPLEN, COPEN
+	move.w	#$83c0,DMACON(a6)	; DMAEN, BPLEN, COPEN, BLTEN
 	move.w	#$c000|INTF_VERTB,INTENA(a6)
 
 	; The second part, after the first on the disk (from sector 2) and in memory.
@@ -79,16 +97,54 @@ level3:
 	move.w	#INTF_VERTB,INTREQ(a6)
 	move.w	#INTF_VERTB,INTREQ(a6)
 	move.w	v_shown(a5),SHOWN_VBL.w
-	tst.b	v_music(a5)
-	beq.s	.silent
-	bsr	_mt_music
-.silent:
+	tst.b	v_mode(a5)
+	bne.s	.text
+	bsr	music_tick
 	bsr	intro_frame
-	addq.w	#1,v_frames(a5)
+	bra.s	.done
+.text:	bsr	textpage_frame
+	bsr	music_tick
+.done:	addq.w	#1,v_frames(a5)
 	movem.l	(sp)+,d0-d7/a0-a6
 	rte
 
+; One tick of the music, and what the text pages' analysers read of it (the web port's
+; TickInfo): whether it read a new row, and for each channel whether the row has a note
+; or an instrument, its effect, and its volume as the effects set it.
+music_tick:
+	tst.b	v_music(a5)
+	beq.s	.silent
+	lea	mt_data(pc),a0
+	move.b	mt_Counter(a0),d0	; the row is read when the counter reaches the
+	addq.b	#1,d0			; speed, unless a pattern delay is running
+	cmp.b	mt_Speed(a0),d0
+	shs	d0
+	tst.b	mt_PattDelTime2(a0)
+	beq.s	.row
+	moveq	#0,d0
+.row:	move.b	d0,v_tick_row(a5)
+	bsr	_mt_music
+	lea	mt_data+mt_chan1(pc),a0
+	lea	v_tick(a5),a1
+	moveq	#4-1,d1
+.channel:
+	moveq	#0,d0
+	move.b	n_cmd(a0),d0
+	and.b	#$f0,d0			; the instrument's low nibble
+	or.w	n_note(a0),d0		; its high nibble, and the period
+	sne	(a1)+			; a note or an instrument
+	move.b	n_cmd(a0),d0
+	and.b	#$0f,d0
+	move.b	d0,(a1)+
+	move.w	n_volume(a0),(a1)+
+	lea	n_sizeof(a0),a0
+	dbf	d1,.channel
+	st	v_tick_valid(a5)
+.silent:
+	rts
+
 	include	"intro.s"
+	include	"textpage.s"
 	include	"loader.s"
 
 	; The first part's data: the ear.
@@ -102,6 +158,8 @@ hfd_bitmap:	incbin	"hfd.raw"
 aeon_bitmap:	incbin	"aeon.raw"
 rules:		incbin	"rules.raw"
 song:		incbin	"module.mod"
+textpage_ram:	incbin	"textpage.bin"	; rip/extracted/textpage: the ST's RAM, $12000-$25B00
+ste_colors:	incbin	"ste_colors.raw"	; STE palette words to $rgb (tools/mkintro.py)
 
 	cnop	0,512
 bss_start:

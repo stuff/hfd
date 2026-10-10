@@ -19,5 +19,5 @@ The ports share no code. What they share is the **data** in `rip/` (modules, bit
 Each port reads this data from `rip/` or copies it at build time, without duplicating it in the repository.
 
 ## Next steps
-- **Amiga**: the most natural target (50 Hz, Paula, Copper for the rasters, blitter for the spreader). See SPEC.md, section 9. In progress in [`ports/amiga/`](ports/amiga/) (68000 assembly, built and verified on macOS with vasm and vAmiga): the intro is done, identical to the demo frame by frame; the text pages, the menu and the song changes remain.
+- **Amiga**: the most natural target (50 Hz, Paula, Copper for the rasters, blitter for the spreader). See SPEC.md, section 9. In progress in [`ports/amiga/`](ports/amiga/) (68000 assembly, built and verified on macOS with vasm and vAmiga): the intro and the text pages are done, identical to the demo (and to the web port for the analysers) frame by frame; the menu and the song changes remain.
 - **Reference video**: it is not versioned (about 390 MB in `rip/out/`). It can be regenerated in a few minutes, see "Reference video" in rip/README.md. It is needed to verify a port.
