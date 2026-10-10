@@ -8,6 +8,8 @@ A bootable disk for the Amiga 500 with 1 MB (OCS, Kickstart 1.3, 512 KB chip + 5
 - **Every frame of the menu and of a song change is identical to the demo's**: the reference recording's SPACE, DOWN and RETURN (Just Spank It), VBLs 9024 to 10400 (1,377 frames).
 - The music starts on the same VBLs as in the demo (Enigma at 2836, Just Spank It at 10184), and follows the reference recording as closely as the web port's replay does: their 10 ms envelopes correlate at 0.90 to 0.94, without drifting. The 8 modules decompress byte for byte.
 
+Every `v*` tag puts the disk, `hfd.adf`, in the GitHub release (see [`.github/workflows/native.yml`](../../.github/workflows/native.yml)).
+
 ## Building
 
 ```bash
