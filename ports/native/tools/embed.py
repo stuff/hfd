@@ -122,10 +122,10 @@ def main(rip, out):
     parts.append('const uint8_t *const TEXTPAGE_RAM = textpage_ram;')
     parts.append(f'const size_t TEXTPAGE_RAM_SIZE = {len(ram)};')
 
+    # Always written, even when unchanged: build tools that compare dates (Make) would
+    # otherwise run this script again on every build.
     out.parent.mkdir(parents=True, exist_ok=True)
-    text = '\n'.join(parts) + '\n'
-    if not out.exists() or out.read_text() != text:
-        out.write_text(text)
+    out.write_text('\n'.join(parts) + '\n')
 
 
 if __name__ == '__main__':

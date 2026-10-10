@@ -126,8 +126,8 @@ def ico(images):
 
 
 def write(path, data):
-    if not path.exists() or path.read_bytes() != data:
-        path.write_bytes(data)
+    # always written, even when unchanged, so that Make sees the outputs up to date
+    path.write_bytes(data)
 
 
 def main(rip, out):
