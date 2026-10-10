@@ -8,7 +8,6 @@ Writes into <out dir>:
 - hfd.iconset, for the macOS bundle (rounded square with Apple's margins), which
   iconutil turns into hfd.icns at build time (AppKit, unlike the Finder, doesn't
   read every hand-made .icns);
-- icon.png (512 pixels, same look), which the program gives the Dock on macOS;
 - hfd.ico and hfd.rc, for the Windows executable;
 - icon.c, the RGBA pixels SDL gives the window on Linux.
 Standard library only."""
@@ -137,7 +136,6 @@ def main(rip, out):
     # macOS: Apple's grid, an 824-pixel rounded square in 1024, the ear 4 pixels per ST pixel.
     mac = sizes(render(ear, margin=100, radius=185, scale=4))
     iconset({n: png(r) for n, r in mac.items()}, out / 'hfd.iconset')
-    write(out / 'icon.png', png(mac[512]))
     # Windows and Linux: the square fills the icon.
     full = sizes(render(ear, margin=8, radius=160, scale=5))
     write(out / 'hfd.ico', ico({n: png(full[n]) for n in (16, 32, 64, 128, 256)}))

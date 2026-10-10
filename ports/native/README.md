@@ -62,7 +62,7 @@ Each file is the port of its web counterpart and keeps its names and comments. S
 | `src/intro.c`, `menu.c`, `loading.c`, `textpage.c` | `src/scenes/*.ts`                                                                                                                                                       |
 | `src/main.c`                                       | `src/main.ts`: window, input, VBL loop                                                                                                                                  |
 | `tools/embed.py`                                   | the `?indexed` plugin in `vite.config.ts`: PNG → palette indices, JSON palettes, modules                                                                                |
-| `tools/icon.py`                                    | (native only) the icon: the loading screen's ear on its blue, in pixel art, as an `.iconset` that `iconutil` turns into the macOS bundle's `.icns` (the Finder), an `icon.png` that the program gives the Dock and Cmd-Tab on macOS, `.ico` (Windows resources) and RGBA pixels (the window on Linux) |
+| `tools/icon.py`                                    | (native only) the icon: the loading screen's ear on its blue, in pixel art, as an `.iconset` that `iconutil` turns into the macOS bundle's `.icns`, `.ico` (Windows resources) and RGBA pixels (the window on Linux) |
 
 Differences with the web port:
 

@@ -47,7 +47,7 @@ add_custom_command(
 # The icon, drawn from the loading screen's ear (see tools/icon.py).
 set(GEN ${CMAKE_CURRENT_BINARY_DIR}/gen)
 add_custom_command(
-  OUTPUT ${GEN}/icon.c ${GEN}/hfd.ico ${GEN}/hfd.rc ${GEN}/hfd.iconset/icon_512x512@2x.png ${GEN}/icon.png
+  OUTPUT ${GEN}/icon.c ${GEN}/hfd.ico ${GEN}/hfd.rc ${GEN}/hfd.iconset/icon_512x512@2x.png
   COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/tools/icon.py ${RIP} ${GEN}
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tools/icon.py ${CMAKE_CURRENT_SOURCE_DIR}/tools/embed.py
     ${RIP}/graphics/pictures/loading_screen_indexed.png ${RIP}/graphics/pictures/loading_screen.json
@@ -65,9 +65,8 @@ elseif(APPLE)
     COMMAND ${ICONUTIL} -c icns ${GEN}/hfd.iconset -o ${GEN}/hfd.icns
     DEPENDS ${GEN}/hfd.iconset/icon_512x512@2x.png
     COMMENT "Making the .icns")
-  # And icon.png, which the program gives the Dock and Cmd-Tab when it starts (see main.c).
-  list(APPEND ICON_SOURCES ${GEN}/hfd.icns ${GEN}/icon.png)
-  set_source_files_properties(${GEN}/hfd.icns ${GEN}/icon.png PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+  list(APPEND ICON_SOURCES ${GEN}/hfd.icns)
+  set_source_files_properties(${GEN}/hfd.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
 endif()
 
 add_executable(hfd WIN32 MACOSX_BUNDLE
