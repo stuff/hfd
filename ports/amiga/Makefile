@@ -1,17 +1,20 @@
 # High Fidelity Dreams, Amiga port: build/hfd.adf.
-# The tools come from tools/setup.sh (vasm, vlink and capture in tools/.build).
+# The tools come from tools/setup.sh (vasm, ptplayer, capture in tools/.build).
+# make AUTHENTIC=1: the ear screen lasts as long as in the demo (for verification).
 
+B := build
 TOOLS := tools/.build
-VASM := $(TOOLS)/src/vasm/vasmm68k_mot
+VASM := $(TOOLS)/src/vasm/vasmm68k_mot -quiet -m68000 -Fbin -Isrc -I$(B)
+PYTHON := $(TOOLS)/venv/bin/python
 PTPLAYER := $(TOOLS)/src/ptplayer/ptplayer.asm
 RIP := ../../rip
-MODULE := $(RIP)/music/01 - Act of Impulse (Mantronix & Tip).mod
-B := build
+MODULE := $(RIP)/music/04 - Enigma aka Hyperbased (Firefox & Tip).mod
+DEFINES := $(if $(AUTHENTIC),-DAUTHENTIC=1)
 
 all: $(B)/hfd.adf
 
-$(B)/data.i $(B)/ear.raw: tools/mkdata.py $(RIP)/graphics/pictures/loading_screen_indexed.png
-	python3 tools/mkdata.py $(RIP) $(B)
+$(B)/intro.i: tools/mkintro.py $(wildcard $(RIP)/graphics/pictures/*.json $(RIP)/graphics/pictures/fullscreen/*.json)
+	$(PYTHON) tools/mkintro.py $(RIP) $(B)
 
 # ptplayer.asm ends with END, which would stop the assembly of main.s.
 $(B)/ptplayer.asm: $(PTPLAYER)
@@ -23,17 +26,23 @@ $(B)/module.mod:
 	@mkdir -p $(B)
 	cp "$(MODULE)" $@
 
-$(B)/main.bin: src/main.s $(B)/ptplayer.asm $(B)/data.i $(B)/ear.raw $(B)/module.mod
-	$(VASM) -quiet -m68000 -Fbin -I$(B) -o $@ $<
-	python3 -c "import sys; p=sys.argv[1]; d=open(p,'rb').read(); open(p,'wb').write(d.ljust(-(-len(d)//512)*512, b'\0'))" $@
+# The defines change the program: rebuild it when they change.
+$(B)/defines: FORCE
+	@mkdir -p $(B)
+	@echo '$(DEFINES)' | cmp -s - $@ || echo '$(DEFINES)' > $@
 
-$(B)/boot.bin: src/boot.s $(B)/main.bin
-	$(VASM) -quiet -m68000 -Fbin -DMAIN_SIZE=$$(stat -f%z $(B)/main.bin 2>/dev/null || stat -c%s $(B)/main.bin) -o $@ $<
+$(B)/main.bin: src/main.s src/intro.s src/loader.s src/hardware.i src/memory.i $(B)/ptplayer.asm $(B)/intro.i $(B)/module.mod $(B)/defines
+	$(VASM) $(DEFINES) -o $@ $<
+	$(PYTHON) -c "import sys; p=sys.argv[1]; d=open(p,'rb').read(); open(p,'wb').write(d.ljust(-(-len(d)//512)*512, b'\0'))" $@
+
+$(B)/boot.bin: src/boot.s src/memory.i $(B)/main.bin
+	$(VASM) -DMAIN_SIZE=$$(( $$(wc -c < $(B)/main.bin) )) \
+	  -DPART1_SIZE=$$($(PYTHON) -c "import sys; print(int.from_bytes(open(sys.argv[1], 'rb').read()[4:8], 'big'))" $(B)/main.bin) -o $@ $<
 
 $(B)/hfd.adf: tools/mkadf.py $(B)/boot.bin $(B)/main.bin
-	python3 tools/mkadf.py $(B)/boot.bin $(B)/main.bin $@
+	$(PYTHON) tools/mkadf.py $(B)/boot.bin $(B)/main.bin $@
 
 clean:
 	rm -rf $(B)
 
-.PHONY: all clean
+.PHONY: all clean FORCE

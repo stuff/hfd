@@ -7,10 +7,15 @@
 // frame, as fast as possible. Frame n is VBL n after power-on, so two runs give the same
 // result.
 // - Frames: writes each frame as <out dir>/NNNNN.ppm, the whole PAL frame at lowres
-//   resolution (456 × 313, one pixel per lowres pixel, VBL and HBL areas included).
+//   resolution (456 × 313, one pixel per lowres pixel, VBL and HBL areas included), and
+//   in <out dir>/vbl.txt the frame numbers with the VBL the program shows (see step()).
 // - Audio: vAmiga mutes the sound in warp mode and while paused, so it then runs in VSYNC
 //   mode, one frame per wakeup, and records Paula's output (44.1 kHz, 16-bit stereo, the
 //   A500 filter, vAmiga's default stereo separation). The first 0.2 s fade in.
+//
+// For debugging, with frames: CAPTURE_DEBUG=1 prints the CPU's registers 100 lines into
+// each frame (out of the VBL interrupt), and CAPTURE_DUMP=frame,address,length,file (hex
+// address and length) also saves that memory then.
 
 #include "VAmiga.h"
 #include <chrono>
@@ -55,10 +60,13 @@ static void pause_after(VAmiga &amiga, void (VAmiga::*run)(), bool &flag)
 // Runs one frame, then line 0 of the next one. The finished frame becomes the stable
 // texture at the start of line 0, and the end-of-frame trap stops the CPU just before:
 // usually before the swap, after it if an instruction (an interrupt) straddles it.
-static void step(VAmiga &amiga)
+// Returns the word the program wrote at $1f0 during the frame: the VBL it shows.
+static u16 step(VAmiga &amiga)
 {
     pause_after(amiga, &VAmiga::finishFrame, eof);
+    u16 shown = amiga.mem.debugger.spypeek16(Accessor::CPU, 0x1f0);
     pause_after(amiga, &VAmiga::finishLine, eol);
+    return shown;
 }
 
 static void boot(VAmiga &amiga, const char *rom, const char *adf)
@@ -81,9 +89,25 @@ static int frames(VAmiga &amiga, long first, long count, const std::filesystem::
     std::filesystem::create_directories(out);
     const isize W = 456, H = 313;
     std::vector<unsigned char> rgb(W * H * 3);
+    FILE *vbl = std::fopen((out / "vbl.txt").string().c_str(), "w");
     for (long frame = 0; frame < first + count; frame++) {
-        step(amiga);
+        u16 shown = step(amiga);
         if (frame < first) continue;
+        std::fprintf(vbl, "%ld %d\n", frame, shown);
+        if (getenv("CAPTURE_DEBUG")) {
+            // 100 lines later: out of the VBL interrupt, in the main loop.
+            for (int i = 0; i < 100; i++) pause_after(amiga, &VAmiga::finishLine, eol);
+            auto &cpu = amiga.cpu.getInfo();
+            if (const char *dump = getenv("CAPTURE_DUMP")) {  // frame,address,length,file
+                long at; unsigned addr, len; char file[256];
+                if (std::sscanf(dump, "%ld,%x,%x,%255s", &at, &addr, &len, file) == 4 && at == frame) {
+                    FILE *d = std::fopen(file, "wb");
+                    for (unsigned i = 0; i < len; i++) std::fputc(amiga.mem.debugger.spypeek8(Accessor::CPU, addr + i), d);
+                    std::fclose(d);
+                }
+            }
+            std::fprintf(stderr, "frame %ld pc %06x a5 %06x d0 %08x d1 %08x d2 %08x d7 %08x\n", frame, cpu.pc0, cpu.a[5], cpu.d[0], cpu.d[1], cpu.d[2], cpu.d[7]);
+        }
 
         amiga.videoPort.lockTexture();
         isize nr; bool lof, prevlof;
@@ -109,6 +133,7 @@ static int frames(VAmiga &amiga, long first, long count, const std::filesystem::
         std::fwrite(rgb.data(), 1, rgb.size(), f);
         std::fclose(f);
     }
+    std::fclose(vbl);
     return 0;
 }
 
@@ -125,7 +150,10 @@ static int audio(VAmiga &amiga, long first, double seconds, const char *out)
     amiga.set(Opt::AMIGA_VSYNC, 1);
     amiga.warpOff(1);
     amiga.run();
-    amiga.audioPort.copyStereo(left.data(), right.data(), available());  // what warp mode left
+    // Leaving warp mode clears the buffer, leaving half of it as silence before the first
+    // frame's samples.
+    while (!amiga.isRunning()) std::this_thread::yield();
+    amiga.audioPort.copyStereo(left.data(), right.data(), cap / 2);
 
     // vAmiga fades the sound in over its first 10000 samples.
     const isize rate = 44100, total = isize(seconds * rate);
