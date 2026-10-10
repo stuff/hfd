@@ -7,6 +7,7 @@ Study and ports of the Atari ST music disk *High Fidelity Dreams* (Aura, 1992). 
 - `rip/SPEC.md`: **the demo's behaviour**, measured and platform-independent (VBL timings, fades, menu, text pages, replay, Amiga and Windows/Mac notes). Read it before any port.
 - `rip/README.md`: the extraction (disk, music, graphics, 68000 code) and the Hatari tools.
 - `ports/web/README.md`: the web port (complete), its architecture and its tests.
+- `ports/native/README.md`: the native port (C + SDL3, Windows/Linux/macOS), a transcription of the web port. `ports/native/scripts/check.sh` checks it byte for byte against the web port: any change to the web port's logic must be carried over to it.
 
 ## Method
 - The reference is the demo itself, recorded frame by frame in Hatari: `rip/out/rec1/video.mkv` (frame n = VBL n, 416×276 frame, ST screen at (48, 29)). This file is not versioned. To recreate it:
