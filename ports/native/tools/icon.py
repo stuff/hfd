@@ -5,7 +5,9 @@ dark blue background, in pixel art, at build time.
 usage: icon.py <rip dir> <out dir>
 
 Writes into <out dir>:
-- hfd.icns, for the macOS bundle (rounded square with Apple's margins);
+- hfd.iconset, for the macOS bundle (rounded square with Apple's margins), which
+  iconutil turns into hfd.icns at build time (AppKit, unlike the Finder, doesn't
+  read every hand-made .icns);
 - hfd.ico and hfd.rc, for the Windows executable;
 - icon.c, the RGBA pixels SDL gives the window on Linux.
 Standard library only."""
@@ -105,12 +107,12 @@ def sizes(master):
     return out
 
 
-def icns(images):
-    # PNG entries, by pixel size (the @2x types reuse the same images)
-    types = [(b'icp4', 16), (b'icp5', 32), (b'icp6', 64), (b'ic07', 128), (b'ic08', 256), (b'ic09', 512),
-             (b'ic10', 1024), (b'ic11', 32), (b'ic12', 64), (b'ic13', 256), (b'ic14', 512)]
-    body = b''.join(kind + struct.pack('>I', 8 + len(images[n])) + images[n] for kind, n in types)
-    return b'icns' + struct.pack('>I', 8 + len(body)) + body
+def iconset(images, path):
+    """The PNGs of a macOS .iconset, under their standard names."""
+    path.mkdir(exist_ok=True)
+    for pt in (16, 32, 128, 256, 512):
+        write(path / f'icon_{pt}x{pt}.png', images[pt])
+        write(path / f'icon_{pt}x{pt}@2x.png', images[2 * pt])
 
 
 def ico(images):
@@ -133,7 +135,7 @@ def main(rip, out):
     ear = ear_pixels(rip)
     # macOS: Apple's grid, an 824-pixel rounded square in 1024, the ear 4 pixels per ST pixel.
     mac = sizes(render(ear, margin=100, radius=185, scale=4))
-    write(out / 'hfd.icns', icns({n: png(r) for n, r in mac.items()}))
+    iconset({n: png(r) for n, r in mac.items()}, out / 'hfd.iconset')
     # Windows and Linux: the square fills the icon.
     full = sizes(render(ear, margin=8, radius=160, scale=5))
     write(out / 'hfd.ico', ico({n: png(full[n]) for n in (16, 32, 64, 128, 256)}))
