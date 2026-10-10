@@ -1,6 +1,7 @@
 # High Fidelity Dreams, Amiga port: build/hfd.adf.
 # The tools come from tools/setup.sh (vasm, ptplayer, capture in tools/.build).
 # make AUTHENTIC=1: the ear screen lasts as long as in the demo (for verification).
+# make B=<dir>: builds into another directory (the compressed files stay in build/packed).
 
 B := build
 TOOLS := tools/.build
@@ -10,6 +11,7 @@ PTPLAYER := $(TOOLS)/src/ptplayer/ptplayer.asm
 RIP := ../../rip
 ZX0 := $(TOOLS)/src/ZX0/src/zx0
 DEFINES := $(if $(AUTHENTIC),-DAUTHENTIC=1)
+PACKED := build/packed
 
 all: $(B)/hfd.adf
 
@@ -40,9 +42,9 @@ $(B)/boot.bin: src/boot.s src/memory.i $(B)/main.bin
 
 # (Make can't depend on the modules: their names have spaces.)
 $(B)/hfd.adf: tools/mkdisk.py $(B)/boot.bin $(B)/main.bin
-	$(PYTHON) tools/mkdisk.py $(ZX0) $(B)/boot.bin $(B)/main.bin $(RIP)/music $(B)/packed $@
+	$(PYTHON) tools/mkdisk.py $(ZX0) $(B)/boot.bin $(B)/main.bin $(RIP)/music $(PACKED) $@
 
 clean:
-	rm -rf $(B)
+	rm -rf build
 
 .PHONY: all clean FORCE

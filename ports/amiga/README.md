@@ -20,7 +20,7 @@ builds the tools into `tools/.build/` (about 1 min): `vasm`, `ptplayer`, `zx0`, 
 make
 ```
 
-writes `build/hfd.adf` from `src/` and the data in [`../../rip/`](../../rip/) (the first time, compressing the modules takes a few minutes; `build/packed/` keeps them). `make AUTHENTIC=1` keeps the ear screen and the loading screens as long as in the demo (for the verification); by default they are shorter, as in the web port, but they last until the disk is read and the data decompressed.
+writes `build/hfd.adf` from `src/` and the data in [`../../rip/`](../../rip/) (the first time, compressing the modules takes a few minutes; `build/packed/` keeps them). `make AUTHENTIC=1` keeps the ear screen and the loading screens as long as in the demo (for the verification); by default they are shorter, as in the web port, but they last until the disk is read and the data decompressed. `make B=build/authentic AUTHENTIC=1` builds it into its own directory, beside the default one (the compressed files stay in `build/packed/`).
 
 ## Verifying
 

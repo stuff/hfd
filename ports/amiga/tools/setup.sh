@@ -6,7 +6,9 @@
 # - vAmiga's core at a fixed commit, and capture (capture.cpp) linked to it;
 # - a Python venv with numpy, Pillow and PyAV for compare.py.
 # Needs: a C/C++ compiler (C++20), make, cmake, curl, git, bsdtar (for the .lha), python3.
+# setup.sh --build-only: only what make needs (no vAmiga, no capture; the CI).
 set -e
+BUILD_ONLY=$([ "$1" = --build-only ] && echo 1 || true)
 T=$(cd "$(dirname "$0")" && pwd)
 B=$T/.build
 VAMIGA_COMMIT=899da5ddd872dfb2e9e35e80247cbb2b36086524
@@ -29,6 +31,13 @@ fi
 git -C ZX0 checkout -q "$ZX0_COMMIT"
 [ -x ZX0/src/zx0 ] || cc -O2 -o ZX0/src/zx0 ZX0/src/zx0.c ZX0/src/optimize.c ZX0/src/compress.c ZX0/src/memory.c
 
+[ -x "$B/venv/bin/python" ] || python3 -m venv "$B/venv"
+if [ -n "$BUILD_ONLY" ]; then
+  "$B/venv/bin/pip" install -q pillow
+  echo "OK: the tools for make"
+  exit 0
+fi
+
 if [ ! -d vAmiga ]; then
   git clone -q https://github.com/dirkwhoffmann/vAmiga.git
 fi
@@ -37,7 +46,6 @@ git -C vAmiga checkout -q "$VAMIGA_COMMIT"
 cmake -S "$T" -B "$B/cmake" -DCMAKE_BUILD_TYPE=Release > /dev/null
 cmake --build "$B/cmake" --target capture -j8 > /dev/null
 
-[ -x "$B/venv/bin/python" ] || python3 -m venv "$B/venv"
 "$B/venv/bin/pip" install -q numpy pillow av
 
 echo "OK: $B/cmake/capture"
