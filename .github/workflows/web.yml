@@ -1,0 +1,46 @@
+# Builds the web port and publishes it on GitHub Pages (https://stuff.github.io/hfd/).
+# Vite's `base: './'` makes every URL relative, so the site works under the /hfd/ subpath.
+name: Web port
+
+on:
+  push:
+    branches: [main]
+    paths: ['ports/web/**', 'rip/**', '.github/workflows/web.yml']
+  pull_request:
+    paths: ['ports/web/**', 'rip/**', '.github/workflows/web.yml']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ports/web/package-lock.json
+      - name: Build
+        run: |
+          npm ci --prefix ports/web
+          npm run build --prefix ports/web
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ports/web/dist
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

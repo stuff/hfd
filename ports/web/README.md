@@ -3,6 +3,8 @@
 An exact replica of the music disk in the browser, in Vite + TypeScript, with no runtime dependencies.
 The original data (modules, graphics) is read straight from [`../../rip/`](../../rip/) at build time.
 
+Live version: <https://stuff.github.io/hfd/>, deployed by `.github/workflows/web.yml` on each push to `main`.
+
 ```bash
 npm install
 npm run dev        # http://localhost:5173
