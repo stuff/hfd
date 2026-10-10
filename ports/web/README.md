@@ -38,6 +38,8 @@ Plein écran : double-clic (ou double tap), ou la touche F. Pour qu'un double-cl
   Il mixe comme Paula, sans interpolation, avec les voies 1+4 à gauche et 2+3 à droite. Les ticks vont à 50,05 Hz, la fréquence VBL du ST, comme le replay de la démo.
   Il remonte l'état de chaque voie à chaque tick (volume, période, crête, déclenchement), pour les analyseurs.
 - **`src/scenes/textpage.ts`** : le port du code 68000 des pages de texte (rasters en $12A36, spreader en $1E552, analyseurs en $1E250). Il émule les deux écrans en plans de bits du ST et la chaîne de 12 interruptions Timer B. Il travaille sur une copie de la RAM de l'ST ($12000–$25B00, dans `rip/extracted/textpage/`), lue et modifiée aux adresses d'origine : script et enregistrements des rasters, tables de couleurs, fonte et bulle pré-décalées, chemin de la bulle, texte, 33 lettres en vol.
+- **`src/pacing.ts`** : la cadence d'affichage. La démo avance par VBL de l'ST (50,05 Hz), quel que soit l'écran.
+  À chaque rafraîchissement, on exécute autant de VBL que l'horloge en demande, et on ne redessine que s'il y en a eu au moins une. Cette horloge avance d'un nombre exact de rafraîchissements, dont la période est mesurée : la cadence reste donc régulière malgré la gigue des horodatages (à 60 Hz, une image sur cinq reste affichée deux fois, ce qui est inévitable). Elle est aussi recalée en douceur sur l'horloge du son réellement entendu, pour que l'image et la musique ne dérivent jamais.
 - **`src/scenes/`** : une scène par écran. Tout avance par VBL (1/50 s), avec des durées mesurées dans l'enregistrement de référence.
 - Le plugin Vite de `vite.config.ts` transforme `…_indexed.png?indexed` en indices de palette bruts au moment du build.
 

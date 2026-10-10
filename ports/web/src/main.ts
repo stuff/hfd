@@ -2,6 +2,7 @@ import './style.css';
 import { ENIGMA, loadFont, SONGS } from './assets';
 import { Music } from './audio/music';
 import { ST_VBL_HZ } from './audio/mod';
+import { Pacer } from './pacing';
 import { Display, FRAME_H, FRAME_W, SCREEN_X, SCREEN_Y } from './st/display';
 import { drawText } from './st/text';
 import type { App, Scene } from './scenes/scene';
@@ -60,19 +61,19 @@ class StartScene implements Scene {
   }
 }
 
-// Fixed 50 Hz VBL clock, rendered on animation frames.
-const VBL_MS = 1000 / ST_VBL_HZ;
-let last = performance.now();
-let acc = 0;
+// The ST's 50.05 Hz VBLs, run on display refreshes (see Pacer), locked to the sound
+// once it plays. The picture is only redrawn when a VBL ran.
+const pacer = new Pacer(1000 / ST_VBL_HZ);
+let dirty = true;
 function frame(now: number): void {
-  acc = Math.min(acc + now - last, 250);
-  last = now;
-  while (acc >= VBL_MS) {
-    scene.vbl();
-    acc -= VBL_MS;
+  const audio = app.music.outputTimeMs();
+  const n = pacer.step(now, audio ?? now, audio === null ? 'page' : 'audio');
+  for (let i = 0; i < n; i++) scene.vbl();
+  if (n > 0 || dirty) {
+    scene.draw(display);
+    display.render();
+    dirty = false;
   }
-  scene.draw(display);
-  display.render();
   requestAnimationFrame(frame);
 }
 

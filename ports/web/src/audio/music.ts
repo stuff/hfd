@@ -52,6 +52,19 @@ export class Music {
     this.send({ type: 'fadeOut', ticks });
   }
 
+  /**
+   * The audio clock in ms, at the moment its sound comes out of the speakers (null
+   * before the audio starts). Pictures follow this clock so that they stay in sync.
+   */
+  outputTimeMs(): number | null {
+    if (!this.ctx || this.ctx.state !== 'running') return null;
+    const ts = this.ctx.getOutputTimestamp?.();
+    if (ts?.contextTime !== undefined && ts.performanceTime) {
+      return ts.contextTime * 1000 + (performance.now() - ts.performanceTime);
+    }
+    return this.ctx.currentTime * 1000;
+  }
+
   /** The replay tick being heard now, for the analysers. */
   current(): TickInfo | null {
     if (!this.ctx) return null;
