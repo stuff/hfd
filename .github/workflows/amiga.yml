@@ -1,0 +1,40 @@
+# Builds the Amiga port's disk: the default build (ports/amiga/build/hfd.adf, kept as an
+# artifact) and make AUTHENTIC=1's, each in its own directory. The frame-by-frame
+# verification needs the Kickstart ROM and the reference video, which aren't versioned:
+# it isn't run here.
+name: Amiga port
+
+on:
+  push:
+    branches: [main]
+    paths: ['ports/amiga/**', 'rip/**', '.github/workflows/amiga.yml']
+  pull_request:
+    paths: ['ports/amiga/**', 'rip/**', '.github/workflows/amiga.yml']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ports/amiga
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install bsdtar
+        run: sudo apt-get update && sudo apt-get install -y libarchive-tools
+      - name: Build the tools
+        run: tools/setup.sh --build-only
+      # Compressing the modules with ZX0 takes minutes; build/packed is keyed by content.
+      - uses: actions/cache@v4
+        with:
+          path: ports/amiga/build/packed
+          key: amiga-zx0-${{ hashFiles('ports/amiga/src/**', 'ports/amiga/tools/*.py', 'rip/**') }}
+          restore-keys: amiga-zx0-
+      - name: Build (authentic)
+        run: make B=build/authentic AUTHENTIC=1
+      - name: Build
+        run: make
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hfd-amiga-adf
+          path: ports/amiga/build/hfd.adf
