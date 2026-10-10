@@ -1,0 +1,104 @@
+# Builds the native port for Windows, Linux and macOS. On a v* tag, publishes the
+# three archives as a GitHub release. The Linux job also checks the port byte for byte
+# against the web port (ports/native/scripts/check.sh).
+name: Native port
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+    paths: ['ports/native/**', 'ports/web/src/**', 'ports/web/scripts/**', 'rip/**', '.github/workflows/native.yml']
+  pull_request:
+    paths: ['ports/native/**', 'ports/web/src/**', 'ports/web/scripts/**', 'rip/**', '.github/workflows/native.yml']
+  workflow_dispatch:
+
+jobs:
+  linux:
+    # The oldest supported Ubuntu, so that the binary runs on older glibc versions too.
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install SDL's build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libasound2-dev libpulse-dev libpipewire-0.3-dev \
+            libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev \
+            libxtst-dev libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev \
+            libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev libwayland-dev \
+            wayland-protocols libdecor-0-dev
+      - name: Build
+        run: |
+          cmake -S ports/native -B build -G Ninja -DHFD_VENDOR_SDL=ON
+          cmake --build build
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Compare with the web port
+        run: |
+          npm ci --prefix ports/web
+          ports/native/scripts/check.sh build/hfd
+      - name: Package
+        run: |
+          mkdir hfd-linux-x86_64
+          cp build/hfd hfd-linux-x86_64/
+          tar czf hfd-linux-x86_64.tar.gz hfd-linux-x86_64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hfd-linux-x86_64
+          path: hfd-linux-x86_64.tar.gz
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: |
+          cmake -S ports/native -B build -A x64 -DHFD_VENDOR_SDL=ON
+          cmake --build build --config Release
+      - name: Package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory hfd-windows-x64
+          Copy-Item build/Release/hfd.exe hfd-windows-x64/
+          Compress-Archive hfd-windows-x64 hfd-windows-x64.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hfd-windows-x64
+          path: hfd-windows-x64.zip
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build (universal, for Apple silicon and Intel)
+        run: |
+          cmake -S ports/native -B build -DHFD_VENDOR_SDL=ON \
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+          cmake --build build --config Release -j 4
+      - name: Package
+        run: |
+          # Ad hoc signature: not notarized, so the first launch needs right click > Open.
+          codesign --force --deep --sign - "build/High Fidelity Dreams.app"
+          ditto -c -k --keepParent "build/High Fidelity Dreams.app" hfd-macos-universal.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hfd-macos-universal
+          path: hfd-macos-universal.zip
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [linux, windows, macos]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --title "High Fidelity Dreams $GITHUB_REF_NAME" \
+            --notes "Native builds of the High Fidelity Dreams port: Windows (x64), Linux (x86_64), macOS (universal)." \
+            hfd-linux-x86_64.tar.gz hfd-windows-x64.zip hfd-macos-universal.zip

@@ -194,6 +194,6 @@ Times 288 and 852 come from the actual loading of Just Spank It from the disk. T
   - For the HIGH FIDELITY DREAMS rules, an overscan display is needed, or they must be cropped.
   - The blitter can draw the letters (OR onto a plane) and clear them.
 - **Windows / Mac**:
-  - Two possible routes: package the web port (Tauri, Electron, or simply a local page), or write a native port (C or C++ with SDL2, for example). A native port needs a MOD player (libopenmpt, or a transcription of `ports/web/src/audio/mod.ts`).
+  - Done in `ports/native/` (C + SDL3, also for Linux): a transcription of the web port, MOD player included.
   - As on the web, the display rarely runs at 50 Hz. The logic must stay at 50.05 Hz and be shown at the display's refresh rate (see `ports/web/src/pacing.ts`). With a VRR or 100 Hz display, the pacing is perfect.
 - **In every case**: the most effective verification is to render the scenes offscreen and compare them frame by frame with `out/rec1/video.mkv`, as the web port does (`scripts/render.ts` and `scripts/compare.py`).
