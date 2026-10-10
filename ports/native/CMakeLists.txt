@@ -87,4 +87,7 @@ if(APPLE)
     MACOSX_BUNDLE_ICON_FILE hfd.icns
     MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
     MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION})
+  # The Dock and Cmd-Tab cache the icon until the bundle's own date changes, which
+  # rebuilding the files inside it doesn't do.
+  add_custom_command(TARGET hfd POST_BUILD COMMAND touch $<TARGET_BUNDLE_DIR:hfd>)
 endif()
