@@ -99,7 +99,8 @@ Le relevé brut de toutes les lectures de secteurs est dans `extracted/fdc_reads
 - `extracted/memory/` contient des images RAM brutes (adresse 0 = début du fichier) :
   boot déchiffré, stage 2, RAM à l'entrée du résident ($70000), RAM à l'entrée du programme principal ($4000, code décompacté), et RAM au menu (VBL 9000).
 - `extracted/disasm/*.s` contient des **désassemblages** 68000 récursifs, avec des labels, les registres hardware nommés (`mfp_*`, `snd_*`, `dma_*`…) et les zones de données en `dc.b` :
-  `stage1_bootsector.s`, `stage2_0400.s`, `stage3_0200.s`, `resident_70000.s` (557 instructions), `main_4000.s` (1438 instructions).
+  `stage1_bootsector.s`, `stage2_0400.s`, `stage3_0200.s`, `resident_70000.s` (557 instructions), `main_4000.s` (1438 instructions),
+  et `textpage_4000.s`, le programme principal tel qu'en RAM pendant les pages de texte, désassemblé à partir de toutes les adresses exécutées (voir `extracted/textpage/`).
   Ce n'est **pas** une décompilation en C. La couverture du programme principal est partielle :
   les routines appelées via des tables (`jmp (a0)`) ou par du code auto-généré (le mixeur Paula génère son code en $74000) restent en `dc.b`.
   On peut ajouter des points d'entrée en relançant `tools/rdis.py`.
@@ -137,7 +138,7 @@ Autres outils :
 - `widegrab.py` : reconstitue la version pleine largeur (416 px, bordures comprises) d'un écran qui dessine dans les bordures latérales, à partir d'une image de la référence et de l'image indexée.
   C'est ainsi qu'ont été produits les `graphics/pictures/fullscreen/*_wide_indexed.png` : les filets de HIGH FIDELITY DREAMS débordent dans les bordures.
 - `fadescan.py` : donne, VBL par VBL, le niveau de fondu de chaque bande de lignes d'un écran. C'est ainsi qu'ont été mesurés les effets d'apparition de l'intro.
-- `palscan.py`, `fadescan.py` et `widegrab.py` : voir plus haut.
+- `palscan.py` : relit, VBL par VBL, la palette de chaque ligne à partir d'une image indexée connue.
 - `extracted/textpage/` : la RAM de $12000 à $25B00 juste avant les pages de texte (VBL 5280), utilisée telle quelle par le portage web.
   On y trouve aussi le profil CPU de Hatari sur 300 VBL de pages de texte : chaque instruction exécutée, avec son nombre d'exécutions.
   `extracted/disasm/textpage_4000.s` est le désassemblage obtenu en prenant toutes ces adresses comme points d'entrée.
@@ -162,9 +163,6 @@ Le dossier `out/` n'est pas versionné.
 Remarque : la démo a besoin que le son soit émulé. Avec `--sound off`, elle se bloque au décompactage.
 `hrun.sh` utilise donc le driver audio SDL « disk » sans délai, ce qui garde le son émulé sans caler la vitesse sur le temps réel.
 
-## 5. Pistes pour un portage (PC / web / Amiga)
-- **Musique** : les 8 .mod se jouent directement. Sur le web : libopenmpt (wasm), chiptune3.js ou un player MOD maison en WebAudio. Sur Amiga : le replay ProTracker natif, Paula fait le travail en matériel.
-- **Visuels** : les bitmaps d'origine sont dans `graphics/`.
-  Le reste est du code à refaire : le text-spreader (32 bobs 8×8 avec `font8x8.bin`, textes dans `texts/`), les rasters (palettes par ligne fournies en JSON),
-  et les 4 quads en rotation avec les analyseurs de voies (une frame de référence dans `graphics/textpage/`).
-  Sur Amiga, les rasters se font naturellement au Copper.
+## 5. Pour un portage
+Le comportement complet de la démo (timings à la VBL, fondus, couleurs du menu, fonctionnement des pages de texte, particularités du replay, notes Amiga et Windows/Mac) est décrit dans **[SPEC.md](SPEC.md)**.
+Le portage web (`../ports/web/`) en est une implémentation complète, vérifiée contre la vidéo de référence.

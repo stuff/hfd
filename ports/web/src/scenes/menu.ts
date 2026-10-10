@@ -111,7 +111,7 @@ export class MenuScene implements Scene {
   }
 
   private select(): void {
-    if (this.app.cursor === this.app.playing) return;
+    // even on the song being played: the demo loads it again
     this.app.go(new LoadingScene(this.app, this.app.cursor));
   }
 }
