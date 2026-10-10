@@ -1,55 +1,55 @@
-# Graphismes et fontes d'origine
+# Original graphics and fonts
 
-Aperçu général : `overview.png`.
+General overview: `overview.png`.
 
-## D'où viennent ces images
-Le programme principal garde ses images **compactées** et les décompacte au moment de les afficher (« realtime picture depacking » dans le texte de la démo).
-La démo a donc été arrêtée dans Hatari à chaque écran (`tools/schedule.py` + `tools/hrun.sh`), et les pixels ont été relus **directement dans la mémoire vidéo**.
-Ce sont les indices de couleur exacts, en basse résolution 320 px de large et 4 plans, et non une capture recolorée.
-La palette est déduite de la capture d'écran de Hatari, **ligne par ligne**, car presque tous les écrans changent les couleurs en cours de balayage (rasters).
-`tools/stscreen.py` aligne la RAM vidéo sur la capture : 0 pixel incohérent pour les logos et le menu.
+## Where these images come from
+The main program keeps its images **packed** and unpacks them when it displays them ("realtime picture depacking" in the demo's text).
+So the demo was stopped in Hatari at each screen (`tools/schedule.py` + `tools/hrun.sh`), and the pixels were read back **directly from video memory**.
+These are the exact colour indices, in low resolution, 320 px wide and 4 planes, not a recoloured screenshot.
+The palette is derived from Hatari's screenshot, **line by line**, because almost every screen changes colours mid-scan (rasters).
+`tools/stscreen.py` aligns the video RAM with the screenshot: 0 inconsistent pixels for the logos and the menu.
 
 ## Formats
-Pour chaque image `<nom>` :
-| Fichier | Contenu |
+For each image `<name>`:
+| File | Contents |
 |---|---|
-| `<nom>_indexed.png` | **pixels d'origine** (PNG 16 couleurs indexé). La palette est la couleur la plus fréquente de chaque index sur l'image. |
-| `<nom>.png` | rendu **tel qu'affiché**, rasters compris |
-| `<nom>.json` | adresse RAM source, cadre de découpe, palette (`#rrggbb` + mots couleur STE `$RGB`), indices « raster », et `per_line_palette` (couleurs des indices raster pour chaque ligne) |
-| `<nom>.pi1` | écrans complets uniquement : fichier **Degas** (palette + 32 000 octets planaires), lisible par les outils ST |
+| `<name>_indexed.png` | **original pixels** (16-colour indexed PNG). The palette is the most frequent colour of each index over the image. |
+| `<name>.png` | rendering **as displayed**, rasters included |
+| `<name>.json` | source RAM address, crop box, palette (`#rrggbb` + STE colour words `$RGB`), "raster" indices, and `per_line_palette` (colours of the raster indices for each line) |
+| `<name>.pi1` | full screens only: **Degas** file (palette + 32,000 planar bytes), readable by ST tools |
 
-## Contenu
+## Contents
 - `pictures/`
-  - `loading_screen*` : l'écran de chargement (l'oreille, « by Aeon »), 16 couleurs. Les mots LOADING et DECRUNCHING sont dans la même image, sur les index 13 à 15, révélés par raster.
-  - `logo_an_aura_production`, `logo_high_fidelity_dreams`, `logo_code_and_design_aeon` : les trois logos découpés.
-    Le dégradé or de « AEON » et le bleu de « CODE AND DESIGN » sont des rasters sur les mêmes index, voir le JSON.
-  - `fullscreen/` : les écrans complets correspondants (avec les filets), en PNG et en `.pi1`.
+  - `loading_screen*`: the loading screen (the ear, "by Aeon"), 16 colours. The words LOADING and DECRUNCHING are in the same image, on indices 13 to 15, revealed by raster.
+  - `logo_an_aura_production`, `logo_high_fidelity_dreams`, `logo_code_and_design_aeon`: the three cropped logos.
+    The gold gradient of "AEON" and the blue of "CODE AND DESIGN" are rasters on the same indices, see the JSON.
+  - `fullscreen/`: the matching full screens (with the rules), as PNG and `.pi1`.
 - `menu/`
-  - `menu_select_song` : le menu entier, **218 lignes**, car la démo ouvre la bordure basse.
-    L'entrée en cours de lecture est dessinée avec le plan 3 en plus (index +8), ce qui lui donne la palette rose.
-    Le curseur (les deux filets) est un raster sur la couleur 0, pas des pixels.
-  - `words/` : chaque mot séparé (SELECT SONG, les 8 titres, ENIGMA en version normale et en version « en lecture », LOADING, DECRUNCHING).
-    Les écrans « LOADING / DECRUNCHING + nom du morceau » sont composés à partir de ces mêmes mots (exemple : `screen_*_act_of_impulse`).
-- `fonts/font8x8.*` : la fonte du text-spreader, **44 glyphes 8×8 sur 1 plan**, dans l'ordre ASCII de 48 `0` à 91 `[`.
-  - `font8x8.bin` : 8 octets par glyphe.
-  - `font8x8_strip.png` : bande de 352×8 pixels.
-  - `font8x8_sheet.png` : planche agrandie, avec chaque code et le caractère affiché.
-  - En RAM, la fonte est stockée **pré-décalée** : en $1EC9E pour les décalages 0 à 7 et en $2029E pour les décalages 8 à 15, soit 128 octets par caractère.
-    Les grands titres CREDITS, FEATURES, AURA et LET'S WRAP ne sont pas des images : ils sont composés avec cette fonte, à partir de l'art en points présent dans le texte (`texts/hfd_texts.txt`).
+  - `menu_select_song`: the whole menu, **218 lines**, because the demo opens the bottom border.
+    The entry currently playing is drawn with plane 3 added (index +8), which gives it the pink palette.
+    The cursor (the two rules) is a raster on colour 0, not pixels.
+  - `words/`: each word separately (SELECT SONG, the 8 titles, ENIGMA in normal and "playing" versions, LOADING, DECRUNCHING).
+    The "LOADING / DECRUNCHING + song name" screens are composed from these same words (example: `screen_*_act_of_impulse`).
+- `fonts/font8x8.*`: the text-spreader's font, **44 8×8 glyphs on 1 plane**, in ASCII order from 48 `0` to 91 `[`.
+  - `font8x8.bin`: 8 bytes per glyph.
+  - `font8x8_strip.png`: 352×8 pixel strip.
+  - `font8x8_sheet.png`: enlarged sheet, with each code and the character displayed.
+  - In RAM, the font is stored **pre-shifted**: at $1EC9E for shifts 0 to 7 and at $2029E for shifts 8 to 15, i.e. 128 bytes per character.
+    The big titles CREDITS, FEATURES, AURA and LET'S WRAP are not images: they are composed with this font, from the dot art present in the text (`texts/hfd_texts.txt`).
 - `sprites/`
-  - `bubble16.*` : la bulle 16×16 sur 1 plan, pré-décalée en RAM à $2189E.
-  - `disconnect_module_msg.*` : le message 128×6 « DISCONNECT MODULE! », affiché par le stage 2 du boot si une cartouche est branchée.
-- `textpage/quads_frame_*` : une frame du fond des pages de texte.
-  Les « 4 big vector-quaders with voice-analysers » annoncés dans le texte sont ces **4 bandes**.
-  Ce sont des quads qui tournent autour de l'axe horizontal, dessinés en temps réel dans les plans 0 et 3.
-  Les rayures verticales sont les analyseurs des 4 voies et les couleurs sont des rasters. C'est du code, pas une image : la frame sert de référence visuelle.
+  - `bubble16.*`: the 16×16 bubble on 1 plane, pre-shifted in RAM at $2189E.
+  - `disconnect_module_msg.*`: the 128×6 "DISCONNECT MODULE!" message, shown by boot stage 2 if a cartridge is plugged in.
+- `textpage/quads_frame_*`: one frame of the text pages' background.
+  The "4 big vector-quaders with voice-analysers" announced in the text are these **4 bands**.
+  They are quads rotating around the horizontal axis, drawn in real time in planes 0 and 3.
+  The vertical stripes are the analysers of the 4 channels and the colours are rasters. It's code, not an image: the frame serves as a visual reference.
 
-## Refaire une capture
+## Taking a new capture
 ```bash
 tools/schedule.py out/x "9000:0x39" "9300"
 ```
-Cette commande prépare l'appui sur ESPACE au VBL 9000 (entrée dans le menu) et une capture au VBL 9300.
+This command schedules a SPACE press at VBL 9000 (entering the menu) and a capture at VBL 9300.
 ```bash
 tools/hrun.sh out/x 9400 "" ""
 ```
-Elle lance la démo. Voir ensuite `tools/export_pic.py` (fonction `export`) pour produire les PNG, le JSON et le `.pi1`.
+This one runs the demo. Then see `tools/export_pic.py` (function `export`) to produce the PNGs, the JSON and the `.pi1`.

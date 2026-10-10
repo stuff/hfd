@@ -1,21 +1,21 @@
 # High Fidelity Dreams
 
-*High Fidelity Dreams* est un music disk Atari ST/STE d'**Aura** (code et design : Aeon), sorti en 1992 à la BMT-Party d'Essen.
-Il contient 8 modules Amiga de Phenomena et Sanity.
-Ce projet part de l'étude de la disquette d'origine pour porter la démo sur d'autres machines.
+*High Fidelity Dreams* is an Atari ST/STE music disk by **Aura** (code and design: Aeon), released in 1992 at the BMT-Party in Essen.
+It contains 8 Amiga modules by Phenomena and Sanity.
+This project starts from a study of the original floppy disk and ports the demo to other machines.
 
-## Organisation
+## Layout
 
-| Dossier | Contenu |
+| Folder | Contents |
 |---|---|
-| [`rip/`](rip/) | Tout ce qui a été extrait de la disquette (`hifidrea.st`) : les 8 .mod d'origine, les graphismes et la fonte, les textes, le code 68000 désassemblé, et les outils pour piloter Hatari. Voir [rip/README.md](rip/README.md). |
-| [`rip/SPEC.md`](rip/SPEC.md) | **La spécification du comportement de la démo**, indépendante de toute plateforme. C'est le point de départ de tout nouveau portage. |
-| [`ports/web/`](ports/web/) | Le portage navigateur, en Vite + TypeScript. **Complet** : intro, pages de texte, menu, chargements, musique. Vérifié image par image contre la démo dans Hatari. Voir [ports/web/README.md](ports/web/README.md). |
+| [`rip/`](rip/) | Everything extracted from the disk (`hifidrea.st`): the 8 original .mod files, the graphics and the font, the texts, the disassembled 68000 code, and the tools that drive Hatari. See [rip/README.md](rip/README.md). |
+| [`rip/SPEC.md`](rip/SPEC.md) | **The specification of the demo's behaviour**, independent of any platform. It is the starting point for any new port. |
+| [`ports/web/`](ports/web/) | The browser port, in Vite + TypeScript. **Complete**: intro, text pages, menu, loading screens, music. Verified frame by frame against the demo running in Hatari. See [ports/web/README.md](ports/web/README.md). |
 
-Les portages ne partagent pas de code. Ce qu'ils partagent, ce sont les **données** de `rip/` (modules, bitmaps, palettes, RAM des pages de texte) et la spécification.
-Chaque port lit ces données dans `rip/` ou les copie au moment du build, sans les dupliquer dans le dépôt.
+The ports share no code. What they share is the **data** in `rip/` (modules, bitmaps, palettes, text page RAM) and the specification.
+Each port reads this data from `rip/` or copies it at build time, without duplicating it in the repository.
 
-## Pistes pour la suite
-- **Windows / Mac** : le plus court est d'empaqueter le port web (Tauri ou Electron). Un port natif (C/C++ + SDL2) devra reprendre le lecteur MOD et la cadence 50 Hz du port web. Voir SPEC.md, section 9.
-- **Amiga** : la cible la plus naturelle (50 Hz, Paula, Copper pour les rasters, blitter pour le spreader). Voir SPEC.md, section 9.
-- **Vidéo de référence** : elle n'est pas versionnée (environ 390 Mo dans `rip/out/`). Elle se régénère en quelques minutes, voir « Vidéo de référence » dans rip/README.md. On en a besoin pour vérifier un port.
+## Next steps
+- **Windows / Mac**: the shortest path is to package the web port (Tauri or Electron). A native port (C/C++ + SDL2) will have to take over the MOD player and the 50 Hz pacing from the web port. See SPEC.md, section 9.
+- **Amiga**: the most natural target (50 Hz, Paula, Copper for the rasters, blitter for the spreader). See SPEC.md, section 9.
+- **Reference video**: it is not versioned (about 390 MB in `rip/out/`). It can be regenerated in a few minutes, see "Reference video" in rip/README.md. It is needed to verify a port.

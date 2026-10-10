@@ -1,51 +1,51 @@
-# High Fidelity Dreams — portage web
+# High Fidelity Dreams — web port
 
-Réplique exacte du music disk dans le navigateur, en Vite + TypeScript, sans dépendance à l'exécution.
-Les données d'origine (modules, graphismes) sont lues directement dans [`../../rip/`](../../rip/) au moment du build.
+An exact replica of the music disk in the browser, in Vite + TypeScript, with no runtime dependencies.
+The original data (modules, graphics) is read straight from [`../../rip/`](../../rip/) at build time.
 
 ```bash
 npm install
 npm run dev        # http://localhost:5173
-npm run build      # site statique dans dist/
+npm run build      # static site in dist/
 ```
 
-Paramètres d'URL :
-- `?authentic` : durées d'origine des chargements, comme sur la disquette. L'écran de l'oreille dure alors 45 s au lieu de 6 s, et chaque changement de morceau 18 s au lieu de 5 s. Les fondus, eux, sont identiques dans les deux cas.
-- `?menu` : saute l'intro et va directement au menu (pour le développement).
-- `?debug` : expose l'application dans la console sous `hfd`.
+URL parameters:
+- `?authentic`: original loading times, as on the floppy disk. The ear screen then lasts 45 s instead of 6 s, and each song change 18 s instead of 5 s. The fades are the same either way.
+- `?menu`: skips the intro and goes straight to the menu (for development).
+- `?debug`: exposes the application in the console as `hfd`.
 
-Commandes, comme dans la démo :
-- ESPACE fait passer des pages de texte au menu, et du menu aux pages de texte. Celles-ci reprennent là où elles s'étaient arrêtées, et la musique continue.
-- Dans le menu, ↑ / ↓ pour choisir, RETURN pour lancer le morceau.
+Controls, as in the demo:
+- SPACE switches from the text pages to the menu, and from the menu to the text pages. The text pages resume where they left off, and the music keeps playing.
+- In the menu, ↑ / ↓ to choose, RETURN to start the song.
 
-Pour la souris et le tactile (ce n'est pas dans la démo) : un clic sur une page de texte, ou sur SELECT SONG dans le menu, fait comme ESPACE. Un survol déplace le curseur, et un clic ou un tap sur un titre le lance.
+For mouse and touch (not in the demo): a click on a text page, or on SELECT SONG in the menu, does what SPACE does. Hovering moves the cursor, and a click or tap on a title starts it.
 
-Plein écran : double-clic (ou double tap), ou la touche F. Pour qu'un double-clic ne compte pas aussi comme un clic, l'action d'un clic simple attend 250 ms.
+Full screen: double-click (or double tap), or the F key. So that a double-click doesn't also count as a click, a single click's action waits 250 ms.
 
-## État
-- [x] Menu SELECT SONG, curseur, entrée en lecture, fondus
-- [x] LOADING / DECRUNCHING + nom du morceau, fondu sonore
-- [x] Lecteur MOD (AudioWorklet)
-- [x] Intro : écran de l'oreille (LOADING / DECRUNCHING pulsés), logos AN AURA PRODUCTION / HIGH FIDELITY DREAMS (filets qui glissent dans les bordures) / CODE AND DESIGN AEON
-- [x] Pages de texte : text-spreader, 4 bandes « vectorielles » (rasters), analyseurs de voies, fondus
+## Status
+- [x] SELECT SONG menu, cursor, now-playing entry, fades
+- [x] LOADING / DECRUNCHING + song name, sound fade-out
+- [x] MOD player (AudioWorklet)
+- [x] Intro: ear screen (pulsing LOADING / DECRUNCHING), AN AURA PRODUCTION / HIGH FIDELITY DREAMS (rules sliding into the borders) / CODE AND DESIGN AEON logos
+- [x] Text pages: text-spreader, 4 "vector" bands (rasters), channel analysers, fades
 
-## Comment c'est fait
-- **`src/st/display.ts`** : un écran ST virtuel cadré comme les captures de Hatari (416×276, bordures comprises, écran en (48, 29)).
-  Les pixels sont des indices de couleur. Chaque ligne a sa propre palette de 16 couleurs (c'est ainsi que marchent les rasters), et la bordure prend la couleur 0 de sa ligne.
-  Le fondu reproduit celui de la démo : au niveau j, chaque composante perd j sur l'échelle 3 bits du ST.
-  Le programme principal perd au passage le bit fin du STE, alors que le loader (écran de l'oreille) le garde. `fadeLines` donne à une bande de lignes son propre niveau de fondu, et `wide` ouvre les bordures latérales d'une ligne.
-- **`src/audio/mod.ts`** : un replay ProTracker sans dépendance (il tourne dans l'AudioWorklet comme dans Node).
-  Il mixe comme Paula, sans interpolation, avec les voies 1+4 à gauche et 2+3 à droite. Les ticks vont à 50,05 Hz, la fréquence VBL du ST, comme le replay de la démo.
-  Il remonte l'état de chaque voie à chaque tick (volume, période, crête, déclenchement), pour les analyseurs.
-- **`src/scenes/textpage.ts`** : le port du code 68000 des pages de texte (rasters en $12A36, spreader en $1E552, analyseurs en $1E250). Il émule les deux écrans en plans de bits du ST et la chaîne de 12 interruptions Timer B. Il travaille sur une copie de la RAM de l'ST ($12000–$25B00, dans `rip/extracted/textpage/`), lue et modifiée aux adresses d'origine : script et enregistrements des rasters, tables de couleurs, fonte et bulle pré-décalées, chemin de la bulle, texte, 33 lettres en vol.
-- **`src/pacing.ts`** : la cadence d'affichage. La démo avance par VBL de l'ST (50,05 Hz), quel que soit l'écran.
-  À chaque rafraîchissement, on exécute autant de VBL que l'horloge en demande, et on ne redessine que s'il y en a eu au moins une. Cette horloge avance d'un nombre exact de rafraîchissements, dont la période est mesurée : la cadence reste donc régulière malgré la gigue des horodatages (à 60 Hz, une image sur cinq reste affichée deux fois, ce qui est inévitable). Elle est aussi recalée en douceur sur l'horloge du son réellement entendu, pour que l'image et la musique ne dérivent jamais.
-- **`src/scenes/`** : une scène par écran. Tout avance par VBL (1/50 s), avec des durées mesurées dans l'enregistrement de référence.
-- Le plugin Vite de `vite.config.ts` transforme `…_indexed.png?indexed` en indices de palette bruts au moment du build.
+## How it works
+- **`src/st/display.ts`**: a virtual ST screen framed like Hatari's captures (416×276, borders included, screen at (48, 29)).
+  Pixels are colour indices. Each line has its own 16-colour palette (that is how rasters work), and the border takes colour 0 of its line.
+  The fade reproduces the demo's: at level j, each component loses j on the ST's 3-bit scale.
+  The main program loses the STE's fine bit along the way, whereas the loader (ear screen) keeps it. `fadeLines` gives a band of lines its own fade level, and `wide` opens a line's side borders.
+- **`src/audio/mod.ts`**: a dependency-free ProTracker replay (it runs in the AudioWorklet as well as in Node).
+  It mixes like Paula, without interpolation, with channels 1+4 on the left and 2+3 on the right. Ticks run at 50.05 Hz, the ST's VBL rate, like the demo's replay.
+  It reports each channel's state on every tick (volume, period, peak, trigger), for the analysers.
+- **`src/scenes/textpage.ts`**: the port of the text pages' 68000 code (rasters at $12A36, spreader at $1E552, analysers at $1E250). It emulates the ST's two bitplane screens and the chain of 12 Timer B interrupts. It works on a copy of the ST's RAM ($12000–$25B00, in `rip/extracted/textpage/`), read and modified at the original addresses: raster script and records, colour tables, pre-shifted font and bubble, bubble path, text, 33 letters in flight.
+- **`src/pacing.ts`**: the display pacing. The demo advances by ST VBLs (50.05 Hz), whatever the display.
+  On each refresh, we run as many VBLs as the clock asks for, and only redraw if at least one ran. This clock advances by a whole number of refreshes, whose period is measured: the pacing therefore stays regular despite timestamp jitter (at 60 Hz, one frame in five stays up for two refreshes, which is unavoidable). It is also gently pulled towards the clock of the sound actually being heard, so that picture and music never drift apart.
+- **`src/scenes/`**: one scene per screen. Everything advances by VBL (1/50 s), with durations measured in the reference recording.
+- The Vite plugin in `vite.config.ts` turns `…_indexed.png?indexed` into raw palette indices at build time.
 
-## Vérification contre la démo d'origine
-La référence est l'enregistrement image par image de la démo dans Hatari (voir « Vidéo de référence » dans [`rip/README.md`](../../rip/README.md)).
-`scripts/render.ts` fait tourner les scènes sans navigateur, et `scripts/compare.py` les compare pixel par pixel à la vidéo :
+## Verification against the original demo
+The reference is the frame-by-frame recording of the demo in Hatari (see "Reference video" in [`rip/README.md`](../../rip/README.md)).
+`scripts/render.ts` runs the scenes without a browser, and `scripts/compare.py` compares them pixel by pixel with the video:
 
 ```bash
 npx vite-node scripts/render.ts -- intro /tmp/intro.rgb 4753
@@ -53,19 +53,19 @@ python3 scripts/compare.py /tmp/intro.rgb ../../rip/out/rec1/video.mkv 546
 npx vite-node scripts/render.ts -- menu /tmp/menu.rgb 1396 127:ArrowDown 276:Enter
 python3 scripts/compare.py /tmp/menu.rgb ../../rip/out/rec1/video.mkv 9024
 ```
-- **Intro** : la VBL 0 du script correspond à la VBL 546 de la référence (apparition de l'oreille, après EmuTOS). Résultat : **0 pixel de différence sur 4 753 images**, de l'oreille jusqu'à la fin de CODE AND DESIGN AEON.
-- **Menu** : la VBL 0 correspond à la VBL 9024 (ESPACE au VBL 9000). Le menu, le déplacement du curseur, RETURN, LOADING, DECRUNCHING et le retour au menu donnent **0 pixel de différence sur 1 396 images**.
+- **Intro**: VBL 0 of the script corresponds to VBL 546 of the reference (the ear appearing, after EmuTOS). Result: **0 pixels of difference over 4,753 frames**, from the ear to the end of CODE AND DESIGN AEON.
+- **Menu**: VBL 0 corresponds to VBL 9024 (SPACE at VBL 9000). The menu, cursor movement, RETURN, LOADING, DECRUNCHING and the return to the menu give **0 pixels of difference over 1,396 frames**.
 
-Ces deux comparaisons se font VBL par VBL.
+Both comparisons are done VBL by VBL.
 
-- **Pages de texte** :
+- **Text pages**:
   ```bash
   ENIGMA_TICKS=2471 npx vite-node scripts/render.ts -- text /tmp/text.rgb 600
   python3 scripts/compare.py /tmp/text.rgb ../../rip/out/rec1/video.mkv 5295
   ```
-  Le texte, la bulle, les lettres en vol et les bandes sont identiques à la référence. Les analyseurs, eux, dépendent de l'instant exact de la musique.
-  Or Hatari ne la rejoue pas exactement au même moment d'une exécution à l'autre : deux exécutions ont montré 2 lignes de partition d'écart. La logique des analyseurs a donc été validée sur les niveaux lus en RAM (mêmes valeurs que l'ST), pas à l'image près.
+  The text, the bubble, the letters in flight and the bands are identical to the reference. The analysers, however, depend on the exact timing of the music.
+  And Hatari doesn't replay it at exactly the same moment from one run to the next: two runs showed a 2-row pattern offset. The analysers' logic was therefore validated against the levels read from RAM (same values as the ST), not to the frame.
 
-Pour le son, `scripts/render-audio.ts` rend un module en WAV. Comparé à libopenmpt au même tempo, l'enveloppe corrèle entre 0,94 et 0,99. Seuls quelques passages d'*Act of Impulse* (vibrato et changement d'instrument sans note) descendent à 0,7–0,85.
+For sound, `scripts/render-audio.ts` renders a module to WAV. Compared with libopenmpt at the same tempo, the envelope correlates between 0.94 and 0.99. Only a few passages of *Act of Impulse* (vibrato and instrument change without a note) drop to 0.7–0.85.
 
-`scripts/smoke.mjs` lance le build dans Chrome headless (puppeteer-core), clique, change de morceau, fait des captures et relève les erreurs de console.
+`scripts/smoke.mjs` runs the build in headless Chrome (puppeteer-core), clicks, changes songs, takes screenshots and collects console errors.
