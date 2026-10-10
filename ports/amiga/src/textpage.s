@@ -85,7 +85,8 @@ COP_WAIT_END	equ	$fffe
 textpage_start:
 	move.w	d0,v_vbl(a5)
 	move.w	d0,v_shown(a5)
-	st	v_mode(a5)
+	move.b	#MODE_TEXT,v_mode(a5)
+	move.w	#-1,v_tp_leave(a5)
 	LEAFAR	textpage_ram,a0
 	sub.l	#$12000,a0
 	move.l	a0,v_tp_delta(a5)
@@ -95,15 +96,15 @@ textpage_start:
 	bsr	wait_blitter
 	move.l	#$01000000,BLTCON0(a6)	; D only: clear
 	move.w	#0,BLTDMOD(a6)
-	LEAFAR	aura_bitmap,a0
+	LEACHIP	C_AURA,a0
 	move.l	a0,BLTDPT(a6)
 	move.w	#400<<6|40,BLTSIZE(a6)	; 32000 bytes
 	bsr	wait_blitter
-	LEAFAR	aeon_bitmap,a0
+	LEACHIP	C_AEON,a0
 	move.l	a0,BLTDPT(a6)
 	move.w	#400<<6|40,BLTSIZE(a6)
 	; The Copper list: its header, and no rasters yet.
-	lea	v_tp_copper(a5),a1
+	LEACHIP	C_TP_COPPER,a1
 	lea	tp_header(pc),a0
 	moveq	#(tp_header_end-tp_header)/2-1,d0
 .copy:	move.w	(a0)+,(a1)+
@@ -112,7 +113,7 @@ textpage_start:
 	clr.w	v_tp_carry0(a5)
 	clr.w	v_tp_carry1(a5)
 	bsr	tp_header_for_next
-	lea	v_tp_copper(a5),a0
+	LEACHIP	C_TP_COPPER,a0
 	move.l	a0,COP1LC(a6)
 	rts
 
@@ -133,21 +134,56 @@ wait_blitter:
 ; One VBL of the text pages, at the start of the frame it shows.
 textpage_frame:
 	LEAFAR	textpage_ram+TP_BIAS-$12000,a4
-	bsr	tp_rasters		; first: the Copper reaches them at line TP_RASTERS
+	; SPACE, once the fade-in is over: fade out, then the menu.
+	move.b	v_key(a5),d0
+	clr.b	v_key(a5)
+	cmp.b	#KEY_SPACE,d0
+	bne.s	.keyed
+	tst.w	v_tp_leave(a5)
+	bpl.s	.keyed
+	cmp.w	#3*FADE_STEPS,v_tp_t(a5)
+	bls.s	.keyed
+	move.w	v_tp_t(a5),v_tp_leave(a5)
+.keyed:	bsr	tp_rasters		; first: the Copper reaches them at line TP_RASTERS
 	bsr	tp_spreader
 	bsr	tp_analysers
-	; The fade-in: every 3 VBLs, 7 times.
+	; The fades: every 3 VBLs, 7 times, in from the start, out from SPACE.
 	addq.w	#1,v_tp_t(a5)
 	moveq	#0,d0
 	move.w	v_tp_t(a5),d0
-	cmp.w	#3*FADE_STEPS,d0
+	move.l	#FADE_STEP,d2
+	move.w	v_tp_leave(a5),d1
+	bmi.s	.fade
+	neg.l	d2
+	sub.w	d1,d0			; VBLs since SPACE
+	cmp.w	#3*FADE_STEPS+3,d0	; then 3 VBLs of black, and the menu
+	bhs.s	.menu
+	tst.w	d0
+	beq.s	.faded
+.fade:	cmp.w	#3*FADE_STEPS,d0
 	bhi.s	.faded
 	divu	#3,d0
 	swap	d0
 	tst.w	d0
 	bne.s	.faded
-	add.l	#FADE_STEP,COLTAB-TP_BIAS(a4)
+	add.l	d2,COLTAB-TP_BIAS(a4)
 .faded:	bsr	tp_header_for_next
+	addq.w	#1,v_vbl(a5)
+	move.w	v_vbl(a5),v_shown(a5)
+	rts
+.menu:	; This frame is black: the menu's first one. From the next, the menu.
+	bsr	tp_header_for_next
+	addq.w	#1,v_vbl(a5)
+	bra	menu_enter
+
+; From the menu, whose last frame was black: the text pages resume where they were, from
+; the next frame.
+textpage_resume:
+	clr.w	v_tp_t(a5)
+	move.w	#-1,v_tp_leave(a5)
+	move.b	#MODE_TEXT,v_mode(a5)
+	LEACHIP	C_TP_COPPER,a0
+	move.l	a0,COP1LC(a6)
 	addq.w	#1,v_vbl(a5)
 	move.w	v_vbl(a5),v_shown(a5)
 	rts
@@ -155,7 +191,7 @@ textpage_frame:
 ; The header for the next frame: the screen drawn in this VBL, and colour 0 above the
 ; first raster (where the last one left it).
 tp_header_for_next:
-	lea	v_tp_copper(a5),a1
+	LEACHIP	C_TP_COPPER,a1
 	move.w	v_tp_carry0(a5),TP_COLOR0(a1)
 	LEAFAR	textpage_ram+TP_BIAS-$12000,a4
 	bsr	tp_draw_screen
@@ -180,9 +216,9 @@ tp_draw_screen:
 tp_screen:
 	cmp.l	#SCREEN_B,d0
 	beq.s	.b
-	LEAFAR	aura_bitmap,a0
+	LEACHIP	C_AURA,a0
 	rts
-.b:	LEAFAR	aeon_bitmap,a0
+.b:	LEACHIP	C_AEON,a0
 	rts
 
 ; d0.w: STE colour word (odd nibble order) to the Amiga's $RGB.
@@ -276,7 +312,7 @@ tp_rasters:
 	; analysers draw in bitplanes 0 and 3. Here they only use bitplane 0, see
 	; tp_analysers, and there are 3 bitplanes: 1 is the analysers, 2 and 4 the letters,
 	; their mixes the text colour.)
-	lea	v_tp_copper+TP_RASTER_LIST(a5),a1
+	LEACHIP	C_TP_COPPER+TP_RASTER_LIST,a1
 	move.w	v_tp_text(a5),d0
 	move.w	#COLOR00+2*2,d1
 .text:	move.w	d1,(a1)+

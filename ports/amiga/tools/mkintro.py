@@ -90,20 +90,25 @@ class Copper:
     def move(self, reg: int, value: int):
         self.words += [reg, value]
 
-    def color(self, i: int, base: int, band, keep: bool):
-        if band is not None:
-            self.patches.append((len(self.words) * 2 + 2, band, [fade(base, j, keep) for j in range(8)]))
-        self.move(COLOR00 + 2 * i, base)
+    def color(self, i: int, spec):
+        """spec: $rgb (never faded), or (band, the colour at the 8 fade levels)."""
+        if isinstance(spec, tuple):
+            band, values = spec
+            self.patches.append((len(self.words) * 2 + 2, band, list(values)))
+            spec = values[0]
+        self.move(COLOR00 + 2 * i, spec)
 
 
-def build(name: str, rows, palette, per_line, band_of, keep=(), wide_rows=()):
-    """A screen's Copper list. rows: its 200 rows of indices (416 wide for wide rows),
-    band_of(y, i): the band whose fade level colour i follows on screen line y (None: never
-    faded), keep: the bands that keep the STE's low bit (the loader's fade), wide_rows: the
-    rows whose borders show the row's first and last pixels (the side borders opened)."""
+def build(name: str, rows, colors, height=200, wide_rows=()):
+    """A screen's Copper list. rows: its rows of indices (416 wide for wide rows): the
+    colours each line needs. colors(y, i): colour i on screen line y (in the borders too),
+    a $rgb never faded or (band, values at the 8 fade levels), the band being the one
+    whose level it follows. height: the screen's lines (200, more if the lower border is
+    open). wide_rows: the rows whose borders show the row's first and last pixels (the
+    side borders opened)."""
     cop = Copper()
     cop.move(DIWSTRT_R, DIWSTRT)
-    cop.move(DIWSTOP_R, DIWSTOP)
+    cop.move(DIWSTOP_R, ((DIWSTRT >> 8) + height & 255) << 8 | DIWSTOP & 255)
     cop.move(DDFSTRT_R, 0x30)
     cop.move(DDFSTOP_R, 0xc8)
     cop.move(BPLCON0, 0x4200 if rows else 0x0200)
@@ -116,26 +121,23 @@ def build(name: str, rows, palette, per_line, band_of, keep=(), wide_rows=()):
         cop.move(BPL1PTH + 4 * p, 0)
         cop.move(BPL1PTH + 4 * p + 2, 0)
 
+    key = lambda spec: spec if isinstance(spec, int) else (spec[0], tuple(spec[1]))
     state = [None] * 16
     for line in range(FRAME_H):
         y = line - SCREEN_Y
         v = V0 + line
-        pal = list(palette)
         needed = {0}
-        if rows and 0 <= y < 200:
-            for i, c in (per_line[y] if y < len(per_line) else {}).items():
-                pal[int(i)] = hexcolor(c)
+        if rows and 0 <= y < height:
             needed |= set(rows[y])
-        want = {i: (pal[i], band_of(y, i)) for i in needed}
-        left = right = None
+        want = {i: colors(y, i) for i in needed}
+        right = None
         if y in wide_rows:
-            left = (pal[rows[y][0]], band_of(y, 0))
-            right = (pal[rows[y][-1]], band_of(y, 0))
-            want[0] = left
-        changes = [i for i in sorted(want) if state[i] != want[i]]
+            want[0] = colors(y, rows[y][0])
+            right = colors(y, rows[y][-1])
+        changes = [i for i in sorted(want) if state[i] != key(want[i])]
         for i in changes:
-            state[i] = want[i]
-        emit = lambda i: cop.color(i, *want[i], want[i][1] in keep)
+            state[i] = key(want[i])
+        emit = lambda i: cop.color(i, want[i])
         early = [i for i in changes if i != 0]
         if line == 0:
             for i in changes:
@@ -154,8 +156,8 @@ def build(name: str, rows, palette, per_line, band_of, keep=(), wide_rows=()):
             assert len(changes) <= 16
         if right:
             cop.wait(v, MID_H)
-            cop.color(0, right[0], right[1], right[1] in keep)
-            state[0] = right
+            cop.color(0, right)
+            state[0] = key(right)
     cop.words += [0xffff, 0xfffe]
 
     asm = [f'{name}_copper:']
@@ -180,6 +182,19 @@ def bands(*ranges):
     return lambda y, i: next((b for b, (y0, y1) in enumerate(ranges) if y0 <= y < y1), None)
 
 
+def picture(palette, per_line, band_of, keep=()):
+    """colors() for a picture: its palette and per-line palette (rip/graphics' JSON), each
+    colour following band_of(y, i) (None: never faded), keeping the STE's low bit for the
+    bands in keep (the loader's fade)."""
+    def colors(y, i):
+        c = palette[i]
+        if 0 <= y < 200 and y < len(per_line) and str(i) in per_line[y]:
+            c = hexcolor(per_line[y][str(i)])
+        band = band_of(y, i)
+        return c if band is None else (band, [fade(c, j, band in keep) for j in range(8)])
+    return colors
+
+
 sources = []
 sizes = []
 
@@ -197,19 +212,19 @@ def ear_band(y, i):
     return 0
 
 
-src, size = build('ear', ear, *meta('loading_screen.json'), ear_band, keep=(0,))
+src, size = build('ear', ear, picture(*meta('loading_screen.json'), ear_band, keep=(0,)))
 sources.append(src), sizes.append(size)
 
 aura = indexed('fullscreen/screen_an_aura_production_indexed.png')
 (out / 'aura.raw').write_bytes(planar(aura, 20))
-src, size = build('aura', aura, *meta('fullscreen/screen_an_aura_production.json'),
-                  bands((53, 73), (84, 116), (127, 147)))
+src, size = build('aura', aura, picture(*meta('fullscreen/screen_an_aura_production.json'),
+                                        bands((53, 73), (84, 116), (127, 147))))
 sources.append(src), sizes.append(size)
 
 aeon = indexed('fullscreen/screen_code_and_design_aeon_indexed.png')
 (out / 'aeon.raw').write_bytes(planar(aeon, 20))
-src, size = build('aeon', aeon, *meta('fullscreen/screen_code_and_design_aeon.json'),
-                  bands((7, 39), (42, 62), (65, 97), (128, 192)))
+src, size = build('aeon', aeon, picture(*meta('fullscreen/screen_code_and_design_aeon.json'),
+                                        bands((7, 39), (42, 62), (65, 97), (128, 192))))
 sources.append(src), sizes.append(size)
 
 # HIGH FIDELITY DREAMS: 416 wide, x = 0 at the frame's left edge. The screen shows
@@ -230,12 +245,88 @@ bottom = [[hfd[y][c + 48] if c + 48 <= 349 else 8 for c in range(656)] for y in 
 (out / 'rules.raw').write_bytes(planar(top, 41) + planar(bottom, 41))
 hfd_rows = [row if y in rules else row[48:368] for y, row in enumerate(hfd)]
 words_band = bands((37, 69), (84, 116), (131, 163))
-src, size = build('hfd', hfd_rows, *meta('fullscreen/screen_high_fidelity_dreams.json'),
-                  lambda y, i: 0 if y in rules else (None if words_band(y, i) is None else words_band(y, i) + 1),
-                  wide_rows=rules)
+src, size = build('hfd', hfd_rows, picture(
+    *meta('fullscreen/screen_high_fidelity_dreams.json'),
+    lambda y, i: 0 if y in rules else (None if words_band(y, i) is None else words_band(y, i) + 1)),
+    wide_rows=rules)
 sources.append(src), sizes.append(size)
 
-src, size = build('black', None, [0] * 16, [], lambda y, i: None)
+src, size = build('black', None, lambda y, i: 0)
+sources.append(src), sizes.append(size)
+
+# The menu (SPEC.md 5), as the web port's scenes/menu.ts: one template per cursor
+# position, every colour following band 0 (the menu's fade), with the measured
+# exceptions in the values at each level.
+MENU_ROWS = 218                       # the menu opens the lower border
+ENTRY_Y, ENTRY_STEP, ENTRY_H = 37, 23, 20
+BASE = [0x000, 0x004, 0x226, 0x448, 0x66a, 0xccc, 0x000, 0x000,
+        0x000, 0x626, 0x848, 0xa6a, 0xc8c, 0xfff, 0x000, 0x000]
+ORANGE = [0x840, 0xa62, 0xc84, 0xea6, 0xfff]   # SELECT SONG, LOADING, DECRUNCHING
+PINK = [0x626, 0x848, 0xa6a, 0xc8c, 0xfff]
+CURSOR = [0x226, 0x448, 0x66a, 0x88c, 0xfff]   # colours 1-5 of the entry under the cursor
+CURSOR_BAR = [0xfff, 0x226, 0x448, 0x66a, 0x88c, 0xfff]  # colour 0 on its lines 7-12
+# The 3-line rules (colour 0) don't fade like the palette: the measured table, per level.
+RULE_FADE = [[0xfff, 0xaaa, 0x666], [0xccc, 0x888, 0x666], [0xaaa, 0x888, 0x444], [0x888, 0x666, 0x444],
+             [0x666, 0x444, 0x222], [0x444, 0x444, 0x222], [0x222, 0x222, 0x000], [0x000, 0x000, 0x000]]
+faded = lambda c, band=0: (band, [fade(c, j, False) for j in range(8)])
+rule = lambda line: (0, [RULE_FADE[j][line] for j in range(8)])
+
+menu = [[p & 7 for p in row] for row in indexed('../menu/menu_select_song_indexed.png')]
+(out / 'menu.raw').write_bytes(planar(menu, 20))
+# Any entry may be the one playing (drawn with bitplane 3: index + 8).
+entry_rows = {y for k in range(8) for y in range(ENTRY_Y + k * ENTRY_STEP, ENTRY_Y + k * ENTRY_STEP + ENTRY_H)}
+menu_needed = [row + [p | 8 for p in row if p] if y in entry_rows else row for y, row in enumerate(menu)]
+
+
+def menu_colors(cursor):
+    entry = ENTRY_Y + cursor * ENTRY_STEP
+
+    def colors(y, i):
+        if i == 0 and (2 <= y <= 4 or 30 <= y <= 32):
+            return rule(y - 2 if y <= 4 else y - 30)
+        if entry + 7 <= y <= entry + 12:
+            if i == 0:
+                return faded(CURSOR_BAR[y - entry - 7])
+            if i in (7, 15):
+                return faded(0xfff)
+        if 7 <= y <= 26 and 1 <= i <= 5:
+            return faded(ORANGE[i - 1])
+        if entry <= y < entry + ENTRY_H and 1 <= i <= 5:
+            return faded(CURSOR[i - 1])
+        if i == 5 and 0 <= y < MENU_ROWS:
+            # The entries' outline: fff one fade level down, not ccc faded.
+            return (0, [0xccc] + [fade(0xfff, j, False) for j in range(1, 8)])
+        return faded(BASE[i])
+    return colors
+
+
+for k in range(8):
+    src, size = build(f'menu{k}', menu_needed, menu_colors(k), height=MENU_ROWS)
+    sources.append(src), sizes.append(size)
+
+# The loading screen (SPEC.md 6): band 0 the screen's fade, band 1 the word's lines
+# (LOADING then DECRUNCHING, which also fade on their own).
+LOADING_WORD_Y, LOADING_NAME_Y = 78, 106
+words = [indexed('../menu/words/word_loading_indexed.png'), indexed('../menu/words/word_decrunching_indexed.png')]
+for word, name in zip(words, ('loading', 'decrunching')):
+    x = (320 - len(word[0])) >> 1
+    (out / f'word_{name}.raw').write_bytes(planar([[0] * x + row + [0] * (320 - x - len(row)) for row in word], 20))
+loading_needed = [[] for _ in range(200)]
+for y in range(20):
+    loading_needed[LOADING_WORD_Y + y] = sorted(set(words[0][y]) | set(words[1][y]))
+    loading_needed[LOADING_NAME_Y + y] = [9, 10, 11, 12, 13]
+LOADING_PAL = [0, *ORANGE, 0, 0, 0, *PINK, 0, 0]
+
+
+def loading_colors(y, i):
+    if i == 0 and (67 <= y <= 69 or 135 <= y <= 137):
+        return rule(y - 67 if y <= 69 else y - 135)
+    if LOADING_WORD_Y <= y < LOADING_WORD_Y + 20 and 1 <= i <= 5:
+        return faded(LOADING_PAL[i], 1)
+    return faded(LOADING_PAL[i])
+
+
+src, size = build('loading', loading_needed, loading_colors)
 sources.append(src), sizes.append(size)
 
 

@@ -23,6 +23,9 @@ SCREEN_EAR	equ	1
 SCREEN_AURA	equ	2
 SCREEN_HFD	equ	3
 SCREEN_AEON	equ	4
+SCREEN_MENU	equ	5		; to 12: the cursor on each entry
+SCREEN_LOADING	equ	13
+SCREEN_DECRUNCHING	equ	14		; the same, the other word: another bitmap
 SCREEN_NONE	equ	-1
 
 ; Bytes per line of a screen (4 interleaved bitplanes of 40 bytes), and of a rule strip.
@@ -37,20 +40,34 @@ intro_init:
 	moveq	#SCREEN_BLACK,d0
 	moveq	#0,d1
 	bsr	set_screen
-	lea	v_copper(a5),a0
+	LEACHIP	C_COPPER,a0
 	move.l	a0,COP1LC(a6)
 	move.w	d0,COPJMP1(a6)
 	rts
 
 ; Once the second part is loaded.
 intro_loaded:
-	; The second buffer of HIGH FIDELITY DREAMS starts as a copy of the first.
+	; The screens, where the custom chips can read them; HIGH FIDELITY DREAMS twice.
+	LEAFAR	aura_bitmap,a0
+	LEACHIP	C_AURA,a1
+	move.l	#32000*2,d0		; aura, hfd
+	bsr	copy
 	LEAFAR	hfd_bitmap,a0
-	lea	v_hfd(a5),a1
-	move.w	#32000/4-1,d0
-.copy:	move.l	(a0)+,(a1)+
-	dbf	d0,.copy
-	rts
+	LEACHIP	C_HFD2,a1
+	move.l	#32000,d0
+	bsr	copy
+	LEAFAR	aeon_bitmap,a0
+	LEACHIP	C_AEON,a1
+	move.l	#32000,d0
+	bsr	copy
+	LEAFAR	menu_bitmap,a0
+	LEACHIP	C_MENU,a1
+	move.l	#MENU_ROWS*LINE,d0
+	bsr	copy
+	move.b	#ENIGMA_SONG,v_cursor(a5)
+	move.b	#ENIGMA_SONG,v_playing(a5)
+	moveq	#ENIGMA_SONG,d0
+	bra	menu_set_playing
 
 ; Computes the next VBL's frame into the Copper buffer that isn't shown.
 intro_frame:
@@ -120,10 +137,10 @@ show:
 ; Copper buffer d1 (0 or 1) shows screen d0 with the levels in v_bands. Returns a1: the
 ; buffer. Keeps d1.
 set_screen:
-	lea	v_copper(a5),a1
+	LEACHIP	C_COPPER,a1
 	tst.b	d1
 	beq.s	.first
-	lea	COPPER_SIZE(a1),a1
+	lea	COPPER_RESERVE(a1),a1
 .first:	bsr	screen_data
 	cmp.b	v_screens(a5,d1.w),d0
 	beq.s	.patch
@@ -169,50 +186,78 @@ set_screen:
 ; patches, a4 its bitmap, d2 the offset of the plane pointers in the list.
 screen_data:
 	move.w	#EAR_PLANES,d2		; the same in every template
+	moveq	#0,d3
+	move.b	d0,d3
+	mulu	#12,d3
+	lea	screens(pc),a0
+	lea	(a0,d3.w),a3
+	move.l	a0,a6
+	add.l	8(a3),a6		; the patches
+	move.l	a0,a4
+	add.l	(a3),a0			; the template
+	add.l	4(a3),a4
+	move.l	a4,a3			; its end
+	; The bitmap.
 	cmp.b	#SCREEN_EAR,d0
-	bne.s	.aura
-	lea	ear_copper(pc),a0
-	lea	ear_copper_end(pc),a3
-	lea	ear_patches(pc),a6
-	LEAFAR	ear_bitmap,a4
+	beq.s	.ear
+	cmp.b	#SCREEN_AURA,d0
+	beq.s	.aura
+	cmp.b	#SCREEN_HFD,d0
+	beq	hfd_buffer
+	cmp.b	#SCREEN_AEON,d0
+	beq.s	.aeon
+	cmp.b	#SCREEN_LOADING,d0
+	beq.s	.loading
+	cmp.b	#SCREEN_DECRUNCHING,d0
+	beq.s	.decrunching
+	cmp.b	#SCREEN_MENU,d0
+	bhs.s	.menu
+.ear:	LEACHIP	C_EAR,a4		; (black: not shown)
 	rts
-.aura:	cmp.b	#SCREEN_AURA,d0
-	bne.s	.hfd
-	lea	aura_copper(pc),a0
-	lea	aura_copper_end(pc),a3
-	lea	aura_patches(pc),a6
-	LEAFAR	aura_bitmap,a4
+.aura:	LEACHIP	C_AURA,a4
 	rts
-.hfd:	cmp.b	#SCREEN_HFD,d0
-	bne.s	.aeon
-	lea	hfd_copper(pc),a0
-	lea	hfd_copper_end(pc),a3
-	lea	hfd_patches(pc),a6
-	bsr.s	hfd_buffer
+.aeon:	LEACHIP	C_AEON,a4
 	rts
-.aeon:	cmp.b	#SCREEN_AEON,d0
-	bne.s	.black
-	lea	aeon_copper(pc),a0
-	lea	aeon_copper_end(pc),a3
-	lea	aeon_patches(pc),a6
-	LEAFAR	aeon_bitmap,a4
+.loading:
+	LEACHIP	C_HFD,a4		; (free after the intro)
 	rts
-.black:	lea	black_copper(pc),a0
-	lea	black_copper_end(pc),a3
-	lea	black_patches(pc),a6
-	LEAFAR	ear_bitmap,a4	; not shown
+.decrunching:
+	LEACHIP	C_HFD2,a4
 	rts
+.menu:	LEACHIP	C_MENU,a4
+	rts
+
+; Each screen's Copper template, its end and its patches (tools/mkintro.py).
+SCREEN	macro
+	dc.l	\1_copper-screens,\1_copper_end-screens,\1_patches-screens
+	endm
+screens:
+	SCREEN	black
+	SCREEN	ear
+	SCREEN	aura
+	SCREEN	hfd
+	SCREEN	aeon
+	SCREEN	menu0
+	SCREEN	menu1
+	SCREEN	menu2
+	SCREEN	menu3
+	SCREEN	menu4
+	SCREEN	menu5
+	SCREEN	menu6
+	SCREEN	menu7
+	SCREEN	loading
+	SCREEN	loading			; DECRUNCHING
 
 ; a4: the HIGH FIDELITY DREAMS bitmap of Copper buffer d1.
 hfd_buffer:
-	LEAFAR	hfd_bitmap,a4
+	LEACHIP	C_HFD,a4
 	tst.b	d1
 	beq.s	.first
-	lea	v_hfd(a5),a4
+	LEACHIP	C_HFD2,a4
 .first:	rts
 
 start_music:
-	LEAFAR	song,a0
+	LEACHIP	C_SONG,a0
 	sub.l	a1,a1
 	moveq	#0,d0
 	bsr	_mt_init
@@ -222,6 +267,8 @@ start_music:
 	move.b	mt_Speed(a0),d0
 	subq.b	#1,d0
 	move.b	d0,mt_Counter(a0)
+	moveq	#64,d0			; (after a song's fade-out)
+	bsr	_mt_mastervol
 	st	v_music(a5)
 	rts
 

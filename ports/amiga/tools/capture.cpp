@@ -13,9 +13,11 @@
 //   mode, one frame per wakeup, and records Paula's output (44.1 kHz, 16-bit stereo, the
 //   A500 filter, vAmiga's default stereo separation). The first 0.2 s fade in.
 //
+// CAPTURE_KEYS=frame:code,... presses keys (raw Amiga codes in hex, for 0.1 s) at the
+// start of these frames.
 // For debugging, with frames: CAPTURE_DEBUG=1 prints the CPU's registers 100 lines into
 // each frame (out of the VBL interrupt), and CAPTURE_DUMP=frame,address,length,file (hex
-// address and length) also saves that memory then.
+// address and length; several, separated by ";") also saves that memory then.
 
 #include "VAmiga.h"
 #include <chrono>
@@ -24,6 +26,8 @@
 #include <cstring>
 #include <filesystem>
 #include <iostream>
+#include <map>
+#include <string>
 #include <mutex>
 #include <thread>
 
@@ -69,6 +73,24 @@ static u16 step(VAmiga &amiga)
     return shown;
 }
 
+static std::map<long, int> keys_to_press()
+{
+    // CAPTURE_KEYS=frame:code,...: press a key (raw Amiga code, hex) at the start of a frame.
+    std::map<long, int> keys;
+    if (const char *list = getenv("CAPTURE_KEYS")) {
+        std::string all = list;
+        for (size_t at = 0; at < all.size();) {
+            size_t end = all.find(',', at);
+            std::string item = all.substr(at, end == std::string::npos ? std::string::npos : end - at);
+            size_t colon = item.find(':');
+            keys[std::stol(item.substr(0, colon))] = std::stoi(item.substr(colon + 1), nullptr, 16);
+            if (end == std::string::npos) break;
+            at = end + 1;
+        }
+    }
+    return keys;
+}
+
 static void boot(VAmiga &amiga, const char *rom, const char *adf)
 {
     amiga.launch(&amiga, listener);
@@ -90,7 +112,11 @@ static int frames(VAmiga &amiga, long first, long count, const std::filesystem::
     const isize W = 456, H = 313;
     std::vector<unsigned char> rgb(W * H * 3);
     FILE *vbl = std::fopen((out / "vbl.txt").string().c_str(), "w");
+    auto keys = keys_to_press();
     for (long frame = 0; frame < first + count; frame++) {
+        if (auto key = keys.find(frame); key != keys.end()) {
+            amiga.keyboard.press(KeyCode(key->second), 0.0, 0.1);
+        }
         u16 shown = step(amiga);
         if (frame < first) continue;
         std::fprintf(vbl, "%ld %d\n", frame, shown);
@@ -98,15 +124,17 @@ static int frames(VAmiga &amiga, long first, long count, const std::filesystem::
             // 100 lines later: out of the VBL interrupt, in the main loop.
             for (int i = 0; i < 100; i++) pause_after(amiga, &VAmiga::finishLine, eol);
             auto &cpu = amiga.cpu.getInfo();
-            if (const char *dump = getenv("CAPTURE_DUMP")) {  // frame,address,length,file
-                long at; unsigned addr, len; char file[256];
-                if (std::sscanf(dump, "%ld,%x,%x,%255s", &at, &addr, &len, file) == 4 && at == frame) {
-                    FILE *d = std::fopen(file, "wb");
-                    for (unsigned i = 0; i < len; i++) std::fputc(amiga.mem.debugger.spypeek8(Accessor::CPU, addr + i), d);
-                    std::fclose(d);
+            if (const char *dumps = getenv("CAPTURE_DUMP")) {  // frame,address,length,file;...
+                for (const char *dump = dumps; dump; dump = std::strchr(dump, ';') ? std::strchr(dump, ';') + 1 : nullptr) {
+                    long at; unsigned addr, len; char file[256];
+                    if (std::sscanf(dump, "%ld,%x,%x,%255[^;]", &at, &addr, &len, file) == 4 && at == frame) {
+                        FILE *d = std::fopen(file, "wb");
+                        for (unsigned i = 0; i < len; i++) std::fputc(amiga.mem.debugger.spypeek8(Accessor::CPU, addr + i), d);
+                        std::fclose(d);
+                    }
                 }
             }
-            std::fprintf(stderr, "frame %ld pc %06x a5 %06x d0 %08x d1 %08x d2 %08x d7 %08x\n", frame, cpu.pc0, cpu.a[5], cpu.d[0], cpu.d[1], cpu.d[2], cpu.d[7]);
+            std::fprintf(stderr, "frame %ld pc %06x a3 %06x a4 %06x a5 %06x d0 %08x d1 %08x d2 %08x d7 %08x\n", frame, cpu.pc0, cpu.a[3], cpu.a[4], cpu.a[5], cpu.d[0], cpu.d[1], cpu.d[2], cpu.d[7]);
         }
 
         amiga.videoPort.lockTexture();
@@ -139,7 +167,11 @@ static int frames(VAmiga &amiga, long first, long count, const std::filesystem::
 
 static int audio(VAmiga &amiga, long first, double seconds, const char *out)
 {
-    for (long frame = 0; frame < first; frame++) step(amiga);
+    auto keys = keys_to_press();
+    for (long frame = 0; frame < first; frame++) {
+        if (auto key = keys.find(frame); key != keys.end()) amiga.keyboard.press(KeyCode(key->second), 0.0, 0.1);
+        step(amiga);
+    }
 
     // From here on, one frame per wakeUp(), at whatever pace we drain the samples. The
     // audio buffer must never run dry: vAmiga then clears it and changes the sample rate.
@@ -158,7 +190,8 @@ static int audio(VAmiga &amiga, long first, double seconds, const char *out)
     // vAmiga fades the sound in over its first 10000 samples.
     const isize rate = 44100, total = isize(seconds * rate);
     std::vector<int16_t> pcm;
-    while (isize(pcm.size()) < 2 * total) {
+    for (long frame = first; isize(pcm.size()) < 2 * total; frame++) {
+        if (auto key = keys.find(frame); key != keys.end()) amiga.keyboard.press(KeyCode(key->second), 0.0, 0.1);
         amiga.wakeUp();
         while (available() < 880) std::this_thread::yield();  // a frame is 882.5 samples
         isize n = amiga.audioPort.copyStereo(left.data(), right.data(), available());

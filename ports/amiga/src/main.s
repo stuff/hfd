@@ -11,8 +11,22 @@
 VBLANK_MUSIC	equ	1		; ptplayer: _mt_music is called from our VBL interrupt
 
 ; (Assembled from address 0: a label's value is its offset in main.bin.)
+
+; What the VBL interrupt runs.
+MODE_INTRO	equ	0		; intro.s, a frame ahead
+MODE_TEXT	equ	1		; textpage.s, in the frame it shows
+MODE_MENU	equ	2		; menu.s, a frame ahead
+MODE_RESUME	equ	3		; the text pages resume from the next frame
+MODE_LOADING	equ	4		; menu.s (after RETURN), a frame ahead
 	bra.w	start
 	dc.l	later			; the first part's size, for the bootblock (see Makefile)
+; The files on the disk (tools/mkdisk.py writes this table): the program's second part,
+; then the 8 modules. For each: its offset on the disk, the bytes to read, where to read
+; them in the destination, where the compressed data starts there, its size, where its
+; samples start if they are stored as differences (0: they aren't).
+FILE_ENTRY	equ	24
+file_table:
+	ds.b	9*FILE_ENTRY
 	include	"ptplayer.asm"
 	include	"hardware.i"
 	include	"memory.i"
@@ -20,6 +34,7 @@ VBLANK_MUSIC	equ	1		; ptplayer: _mt_music is called from our VBL interrupt
 
 ; The variables, at the start of the BSS.
 	rsreset
+v_chip		rs.l	1		; the chip memory block (memory.i)
 v_frames	rs.w	1		; VBL interrupts so far
 v_shown		rs.w	1		; the VBL (as in the reference recording) of the next list
 v_music		rs.b	1		; non-zero: the music is playing
@@ -29,13 +44,25 @@ v_bands		rs.b	4		; the bands' fade levels (0-7), -1: their colour is in v_overri
 v_overrides	rs.w	4
 v_vbl		rs.w	1		; the intro's VBL
 v_loaded	rs.b	1		; non-zero: the second part is loaded
-		rs.b	1
+		rseven
 v_load_from	rs.l	1		; loader.s
 v_load_to	rs.l	1
-v_mode		rs.b	1		; 0: the intro, non-zero: the text pages
+v_mode		rs.b	1		; MODE_*
+v_key		rs.b	1		; the last key pressed (raw code), 0: none
+v_cursor	rs.b	1		; the menu's cursor
+v_playing	rs.b	1		; the song playing
+		rseven
+v_menu_t	rs.w	1		; VBLs of the menu
+v_menu_leave	rs.w	1		; v_menu_t at SPACE, -1: none
+v_tp_leave	rs.w	1		; v_tp_t at SPACE, -1: none
+v_load_t	rs.w	1		; VBLs since RETURN
+v_loading_end	rs.w	1		; when LOADING ends, NEVER: not yet known
+v_decrunching_end rs.w	1		; when DECRUNCHING ends
+v_song		rs.b	1		; the song being loaded
+v_request	rs.b	1		; the main loop's work (REQUEST_*)
 v_tick_valid	rs.b	1		; non-zero: v_tick holds the replay's last tick
 v_tick_row	rs.b	1		; non-zero: that tick read a new row
-		rs.b	1
+		rseven
 v_tick		rs.l	4		; each channel: note or instrument.b, effect.b, volume.w
 v_tp_delta	rs.l	1		; textpage.s: the RAM image's address - $12000
 v_tp_ste	rs.l	1		; the STE colour table
@@ -44,19 +71,20 @@ v_tp_text	rs.w	1		; the text colour
 v_tp_carry0	rs.w	1		; colours 0 and 1 above the first raster
 v_tp_carry1	rs.w	1
 v_tp_first	rs.b	1		; the first raster's line
-		rs.b	1
+		rseven
 v_tp_row	rs.l	8		; an analyser's line
 v_tp_list	rs.l	1		; this VBL's erase list
 v_tp_erase	rs.b	2*ERASE_SIZE	; the screens' erase lists
-v_tp_copper	rs.b	TP_COPPER_SIZE
-v_copper	rs.b	2*COPPER_SIZE	; the two Copper buffers
-v_mfm		rs.w	MFM_WORDS	; a track as read from the disk
-v_hfd		rs.b	32000		; the second buffer of HIGH FIDELITY DREAMS
+v_stack		rs.b	4096		; the main loop's stack
+v_stack_top	rs.b	0
+
 BSS_SIZE	rs.b	0
 
 start:
 	lea	CUSTOM,a6
 	LEAFAR	bss_start,a5
+	lea	v_stack_top(a5),sp
+	move.l	a3,v_chip(a5)
 	move.w	#$7fff,INTENA(a6)	; the system is gone from here on
 	move.w	#$7fff,INTREQ(a6)
 	move.w	#$7fff,INTREQ(a6)
@@ -70,24 +98,102 @@ start:
 	clr.l	(a0)+
 	dbf	d0,.sprite
 
+	; The ear, where the custom chips can read it.
+	LEAFAR	ear_bitmap,a0
+	LEACHIP	C_EAR,a1
+	move.l	#32000,d0
+	bsr	copy
 	bsr	intro_init
 
 	lea	level3(pc),a0
 	move.l	a0,LEVEL3_VECTOR.w
+	lea	level2(pc),a0
+	move.l	a0,LEVEL2_VECTOR.w
+	move.b	#$7f,CIAA+CIAICR	; CIA-A: only the serial port (the keyboard)
+	move.b	#$88,CIAA+CIAICR
+	tst.b	CIAA+CIAICR
 	sub.l	a0,a0			; vector base: 0 on a 68000
 	moveq	#1,d0			; PAL
 	bsr	_mt_install
 	move.w	#$83c0,DMACON(a6)	; DMAEN, BPLEN, COPEN, BLTEN
-	move.w	#$c000|INTF_VERTB,INTENA(a6)
+	move.w	#$c000|INTF_VERTB|INTF_PORTS,INTENA(a6)
 
-	; The second part, after the first on the disk (from sector 2) and in memory.
-	move.l	#1024+later,d0
-	move.l	#bss_start-later,d1
+	; The second part, then Enigma.
+	moveq	#0,d0
 	LEAFAR	later,a0
-	bsr	load_disk
+	bsr	file_load
+	bsr	file_unpack
 	bsr	intro_loaded
+	moveq	#1+ENIGMA_SONG,d0
+	LEACHIP	C_SONG,a0
+	bsr	file_load
+	bsr	file_unpack
 	st	v_loaded(a5)
-.idle:	bra.s	.idle
+
+	; Then the song changes' work (menu.s).
+.idle:	cmp.b	#REQUEST_COMPOSE,v_request(a5)
+	bne.s	.load
+	clr.b	v_request(a5)
+	bsr	loading_compose
+.load:	cmp.b	#REQUEST_LOAD,v_request(a5)
+	bne.s	.idle
+	moveq	#1,d0
+	add.b	v_song(a5),d0
+	LEACHIP	C_SONG,a0
+	bsr	file_load
+	move.b	#REQUEST_LOADED,v_request(a5)
+	bsr	file_unpack
+	move.b	#REQUEST_DONE,v_request(a5)
+	bra.s	.idle
+
+; Reads file d0 (file_table) for destination a0. Keeps the registers.
+file_load:
+	movem.l	d0-d1/a0-a1,-(sp)
+	bsr.s	file_entry
+	add.l	8(a1),a0		; where in the destination
+	move.l	(a1),d0			; the offset on the disk
+	move.l	4(a1),d1		; the bytes
+	bsr	load_disk
+	movem.l	(sp)+,d0-d1/a0-a1
+	rts
+
+; Decompresses file d0, read for destination a0, in place (ZX0). Keeps the registers.
+file_unpack:
+	movem.l	d0-d1/a0-a1/a4,-(sp)
+	bsr.s	file_entry
+	move.l	a1,a4
+	move.l	a0,a1			; destination
+	add.l	12(a4),a0		; the compressed data
+	bsr	zx0_decompress
+	; Samples stored as differences.
+	move.l	20(a4),d0
+	beq.s	.done
+	lea	(a1,d0.l),a0		; (a1: the destination, kept by the decompressors)
+	move.l	16(a4),d1
+	sub.l	d0,d1
+	moveq	#0,d0
+	bra.s	.next
+.sum:	add.b	(a0),d0
+	move.b	d0,(a0)+
+.next:	subq.l	#1,d1
+	bpl.s	.sum
+.done:	movem.l	(sp)+,d0-d1/a0-a1/a4
+	rts
+
+; a1: file d0's entry in the table.
+file_entry:
+	lea	file_table(pc),a1
+	mulu	#FILE_ENTRY,d0
+	add.w	d0,a1
+	rts
+
+; Copies d0 bytes (a multiple of 4) from a0 to a1.
+copy:	lsr.l	#2,d0
+	bra.s	.next
+.long:	move.l	(a0)+,(a1)+
+.next:	subq.l	#1,d0
+	bpl.s	.long
+	rts
 
 ; The VBL interrupt.
 level3:
@@ -97,15 +203,54 @@ level3:
 	move.w	#INTF_VERTB,INTREQ(a6)
 	move.w	#INTF_VERTB,INTREQ(a6)
 	move.w	v_shown(a5),SHOWN_VBL.w
-	tst.b	v_mode(a5)
-	bne.s	.text
+	move.b	v_mode(a5),d0
+	cmp.b	#MODE_TEXT,d0
+	beq.s	.text
 	bsr	music_tick
-	bsr	intro_frame
+	move.b	v_mode(a5),d0
+	beq.s	.intro
+	cmp.b	#MODE_MENU,d0
+	beq.s	.menu
+	cmp.b	#MODE_LOADING,d0
+	beq.s	.loading
+	bsr	textpage_resume
+	bra.s	.done
+.loading:
+	bsr	loading_frame
+	bra.s	.done
+.intro:	bsr	intro_frame
+	bra.s	.done
+.menu:	bsr	menu_frame
 	bra.s	.done
 .text:	bsr	textpage_frame
 	bsr	music_tick
 .done:	addq.w	#1,v_frames(a5)
 	movem.l	(sp)+,d0-d7/a0-a6
+	rte
+
+; The keyboard (level 2, CIA-A's serial port): the code of each key pressed in v_key.
+level2:
+	movem.l	d0-d1/a0/a5,-(sp)
+	LEAFAR	bss_start,a5
+	move.b	CIAA+CIAICR,d0		; (reading clears it)
+	btst	#3,d0			; the serial port
+	beq.s	.done
+	move.b	CIAA+CIASDR,d0
+	bset	#6,CIAA+CIACRA		; handshake: the serial port as an output for 85 µs
+	not.b	d0
+	ror.b	#1,d0			; bit 7: released
+	bmi.s	.released
+	move.b	d0,v_key(a5)
+.released:
+	moveq	#3-1,d1			; 3 raster lines
+.line:	move.b	CUSTOM+VHPOSR,d0
+.same:	cmp.b	CUSTOM+VHPOSR,d0
+	beq.s	.same
+	dbf	d1,.line
+	bclr	#6,CIAA+CIACRA
+.done:	move.w	#INTF_PORTS,CUSTOM+INTREQ
+	move.w	#INTF_PORTS,CUSTOM+INTREQ
+	movem.l	(sp)+,d0-d1/a0/a5
 	rte
 
 ; One tick of the music, and what the text pages' analysers read of it (the web port's
@@ -145,7 +290,9 @@ music_tick:
 
 	include	"intro.s"
 	include	"textpage.s"
+	include	"menu.s"
 	include	"loader.s"
+	include	"zx0.s"
 
 	; The first part's data: the ear.
 ear_bitmap:	incbin	"ear.raw"
@@ -157,13 +304,23 @@ aura_bitmap:	incbin	"aura.raw"
 hfd_bitmap:	incbin	"hfd.raw"
 aeon_bitmap:	incbin	"aeon.raw"
 rules:		incbin	"rules.raw"
-song:		incbin	"module.mod"
+menu_bitmap:	incbin	"menu.raw"		; 218 lines, bitplane 3 set by menu_set_playing
+word_loading:	incbin	"word_loading.raw"	; 20 lines, centred
+word_decrunching: incbin	"word_decrunching.raw"
 textpage_ram:	incbin	"textpage.bin"	; rip/extracted/textpage: the ST's RAM, $12000-$25B00
 ste_colors:	incbin	"ste_colors.raw"	; STE palette words to $rgb (tools/mkintro.py)
 
 	cnop	0,512
-bss_start:
+part2_end:
+; The variables, after the room to decompress the second part in place.
+bss_start	equ	part2_end+PART2_MARGIN
 
 	if	BSS_SIZE>BSS_RESERVE
 	fail	"BSS_SIZE is larger than BSS_RESERVE"
+	endif
+	if	COPPER_SIZE>COPPER_RESERVE
+	fail	"COPPER_SIZE is larger than COPPER_RESERVE"
+	endif
+	if	TP_COPPER_SIZE>512
+	fail	"TP_COPPER_SIZE is larger than its reserve"
 	endif

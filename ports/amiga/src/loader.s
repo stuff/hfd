@@ -8,7 +8,6 @@ DSKPTH		equ	$020
 DSKLEN		equ	$024
 DSKSYNC		equ	$07e
 ADKCON		equ	$09e
-VHPOSR		equ	$006
 INTB_DSKBLK	equ	1
 
 ; CIA-B port B: the drives' control lines (active low).
@@ -108,7 +107,7 @@ wait_lines:
 
 ; Reads a revolution of the current track into the MFM buffer.
 read_track:
-	lea	v_mfm(a5),a1
+	LEACHIP	C_MFM,a1
 	move.l	a1,DSKPTH(a6)
 	move.w	#1<<INTB_DSKBLK,INTREQ(a6)
 	move.w	#$8000|MFM_WORDS,DSKLEN(a6)
@@ -149,8 +148,8 @@ decode_track:
 	lsl.l	d0,d5
 	sub.l	d5,d7
 
-	lea	v_mfm(a5),a1
-.sync:	lea	v_mfm+MFM_WORDS*2-MFM_SECTOR(a5),a3	; the last place a whole sector can start
+	LEACHIP	C_MFM,a1
+.sync:	LEACHIP	C_MFM+MFM_WORDS*2-MFM_SECTOR,a3	; the last place a whole sector can start
 	cmp.l	a3,a1
 	bhs	.scanned
 	cmp.w	#$4489,(a1)+
