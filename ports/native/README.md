@@ -6,7 +6,7 @@ The data (modules, graphics, the text pages' RAM) is read from [`../../rip/`](..
 
 ## Download
 
-Every `v*` tag publishes a GitHub release with the three builds (see [`.github/workflows/native.yml`](../../.github/workflows/native.yml)):
+Every `v*` tag publishes a GitHub release with the three builds, and the Amiga port's disk (see [`.github/workflows/native.yml`](../../.github/workflows/native.yml)):
 
 - `hfd-windows-x64.zip`: `hfd.exe`;
 - `hfd-linux-x86_64.tar.gz`: `hfd`, for X11 or Wayland, with PipeWire, PulseAudio or ALSA;

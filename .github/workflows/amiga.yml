@@ -1,7 +1,7 @@
 # Builds the Amiga port's disk: the default build (ports/amiga/build/hfd.adf, kept as an
 # artifact) and make AUTHENTIC=1's, each in its own directory. The frame-by-frame
 # verification needs the Kickstart ROM and the reference video, which aren't versioned:
-# it isn't run here.
+# it isn't run here. native.yml calls it on a v* tag, to put hfd.adf in the release.
 name: Amiga port
 
 on:
@@ -11,6 +11,7 @@ on:
   pull_request:
     paths: ['ports/amiga/**', 'rip/**', '.github/workflows/amiga.yml']
   workflow_dispatch:
+  workflow_call:
 
 jobs:
   build:

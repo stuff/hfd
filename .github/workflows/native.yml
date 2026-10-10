@@ -1,5 +1,5 @@
 # Builds the native port for Windows, Linux and macOS. On a v* tag, publishes the
-# three archives as a GitHub release. The Linux job also checks the port byte for byte
+# three archives as a GitHub release, with the Amiga port's disk (amiga.yml). The Linux job also checks the port byte for byte
 # against the web port (ports/native/scripts/check.sh).
 name: Native port
 
@@ -85,9 +85,13 @@ jobs:
           name: hfd-macos-universal
           path: hfd-macos-universal.zip
 
+  amiga:
+    if: startsWith(github.ref, 'refs/tags/v')
+    uses: ./.github/workflows/amiga.yml
+
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [linux, windows, macos]
+    needs: [linux, windows, macos, amiga]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -100,5 +104,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --title "High Fidelity Dreams $GITHUB_REF_NAME" \
-            --notes "Native builds of the High Fidelity Dreams port: Windows (x64), Linux (x86_64), macOS (universal)." \
-            hfd-linux-x86_64.tar.gz hfd-windows-x64.zip hfd-macos-universal.zip
+            --notes "Native builds of the High Fidelity Dreams port: Windows (x64), Linux (x86_64), macOS (universal). And the Amiga port's disk (hfd.adf), for an Amiga 500 with 1 MB (Kickstart 1.3)." \
+            hfd-linux-x86_64.tar.gz hfd-windows-x64.zip hfd-macos-universal.zip hfd.adf
