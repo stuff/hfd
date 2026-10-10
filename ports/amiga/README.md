@@ -8,7 +8,7 @@ A bootable disk for the Amiga 500 with 1 MB (OCS, Kickstart 1.3, 512 KB chip + 5
 - **Every frame of the menu and of a song change is identical to the demo's**: the reference recording's SPACE, DOWN and RETURN (Just Spank It), VBLs 9024 to 10400 (1,377 frames).
 - The music starts on the same VBLs as in the demo (Enigma at 2836, Just Spank It at 10184), and follows the reference recording as closely as the web port's replay does: their 10 ms envelopes correlate at 0.90 to 0.94, without drifting. The 8 modules decompress byte for byte.
 
-Every `v*` tag puts the disk, `hfd.adf`, in the GitHub release (see [`.github/workflows/native.yml`](../../.github/workflows/native.yml)).
+Every `v*` tag puts the disk, `hfd-amiga.adf`, in the GitHub release (see [`.github/workflows/native.yml`](../../.github/workflows/native.yml)).
 
 ## Building
 
@@ -22,14 +22,14 @@ builds the tools into `tools/.build/` (about 1 min): `vasm`, `ptplayer`, `zx0`, 
 make
 ```
 
-writes `build/hfd.adf` from `src/` and the data in [`../../rip/`](../../rip/) (the first time, compressing the modules takes a few minutes; `build/packed/` keeps them). `make AUTHENTIC=1` keeps the ear screen and the loading screens as long as in the demo (for the verification); by default they are shorter, as in the web port, but they last until the disk is read and the data decompressed. `make B=build/authentic AUTHENTIC=1` builds it into its own directory, beside the default one (the compressed files stay in `build/packed/`).
+writes `build/hfd-amiga.adf` from `src/` and the data in [`../../rip/`](../../rip/) (the first time, compressing the modules takes a few minutes; `build/packed/` keeps them). `make AUTHENTIC=1` keeps the ear screen and the loading screens as long as in the demo (for the verification); by default they are shorter, as in the web port, but they last until the disk is read and the data decompressed. `make B=build/authentic AUTHENTIC=1` builds it into its own directory, beside the default one (the compressed files stay in `build/packed/`).
 
 ## Verifying
 
 The Kickstart 1.3 ROM isn't in the repository (it is copyrighted): give its path to `capture`. The reference video comes from "Reference video" in [rip/README.md](../../rip/README.md).
 
 ```bash
-tools/.build/cmake/capture ~/Kickstart1.3.rom build/hfd.adf 0 5200 build/frames
+tools/.build/cmake/capture ~/Kickstart1.3.rom build/hfd-amiga.adf 0 5200 build/frames
 ```
 
 ```bash
@@ -39,7 +39,7 @@ tools/.build/venv/bin/python tools/compare.py build/frames ../../rip/out/rec1/vi
 `capture` records each frame (5,200 frames: about 2 GB) and, in `vbl.txt`, the VBL it shows: the program writes it at $1F0. `compare.py` compares each frame with the reference frame of that VBL, whichever version was built. Two runs give the same frames. `CAPTURE_KEYS=frame:code,...` presses keys (raw Amiga codes, in hex): the reference recording's SPACE, DOWN and RETURN are, in `make AUTHENTIC=1`'s build:
 
 ```bash
-CAPTURE_KEYS=8868:40,9017:4d,9167:44 tools/.build/cmake/capture ~/Kickstart1.3.rom build/hfd.adf 8880 1450 build/frames
+CAPTURE_KEYS=8868:40,9017:4d,9167:44 tools/.build/cmake/capture ~/Kickstart1.3.rom build/hfd-amiga.adf 8880 1450 build/frames
 ```
 
 ```bash
@@ -57,7 +57,7 @@ tools/.build/venv/bin/python tools/compare.py build/frames /tmp/text.rgb --rgb-v
 ```
 
 ```bash
-tools/.build/cmake/capture --audio ~/Kickstart1.3.rom build/hfd.adf 2605 40 build/audio.wav
+tools/.build/cmake/capture --audio ~/Kickstart1.3.rom build/hfd-amiga.adf 2605 40 build/audio.wav
 ```
 
 records 40 s of sound from frame 2605 (VBL 2800 in `make AUTHENTIC=1`'s build); `CAPTURE_KEYS` works there too.
