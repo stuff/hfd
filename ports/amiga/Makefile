@@ -1,4 +1,4 @@
-# High Fidelity Dreams, Amiga port: build/hfd.adf.
+# High Fidelity Dreams, Amiga port: build/hfd-amiga.adf.
 # The tools come from tools/setup.sh (vasm, ptplayer, capture in tools/.build).
 # make AUTHENTIC=1: the ear screen lasts as long as in the demo (for verification).
 # make B=<dir>: builds into another directory (the compressed files stay in build/packed).
@@ -13,7 +13,7 @@ ZX0 := $(TOOLS)/src/ZX0/src/zx0
 DEFINES := $(if $(AUTHENTIC),-DAUTHENTIC=1)
 PACKED := build/packed
 
-all: $(B)/hfd.adf
+all: $(B)/hfd-amiga.adf
 
 $(B)/intro.i: tools/mkintro.py $(wildcard $(RIP)/graphics/pictures/*.json $(RIP)/graphics/pictures/fullscreen/*.json)
 	$(PYTHON) tools/mkintro.py $(RIP) $(B)
@@ -41,7 +41,7 @@ $(B)/boot.bin: src/boot.s src/memory.i $(B)/main.bin
 	  -DPART1_SIZE=$$($(PYTHON) -c "import sys; print(int.from_bytes(open(sys.argv[1], 'rb').read()[4:8], 'big'))" $(B)/main.bin) -o $@ $<
 
 # (Make can't depend on the modules: their names have spaces.)
-$(B)/hfd.adf: tools/mkdisk.py $(B)/boot.bin $(B)/main.bin
+$(B)/hfd-amiga.adf: tools/mkdisk.py $(B)/boot.bin $(B)/main.bin
 	$(PYTHON) tools/mkdisk.py $(ZX0) $(B)/boot.bin $(B)/main.bin $(RIP)/music $(PACKED) $@
 
 clean:
