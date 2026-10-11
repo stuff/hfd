@@ -6,6 +6,21 @@ This project starts from a study of the original floppy disk and ports the demo 
 
 **Run it in your browser: <https://stuff.github.io/hfd/>**
 
+<table>
+  <tr>
+    <td><img src="docs/screenshots/loading.png" alt="The loading screen: a golden ear on a dark blue background"></td>
+    <td><img src="docs/screenshots/logo.png" alt="The High Fidelity Dreams logo between two sliding rules"></td>
+    <td><img src="docs/screenshots/aeon.png" alt="Code and design: Aeon"></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/welcome.png" alt="The first text page over the analysers' raster bands"></td>
+    <td><img src="docs/screenshots/credits.png" alt="The credits text page, the modules and their authors"></td>
+    <td><img src="docs/screenshots/menu.png" alt="The song menu, Enigma under the cursor"></td>
+  </tr>
+</table>
+
+*Rendered by the web port, verified frame by frame against the demo running in Hatari (`ports/web/scripts/screenshots.ts`).*
+
 ## Layout
 
 | Folder | Contents |

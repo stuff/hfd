@@ -70,4 +70,6 @@ Both comparisons are done VBL by VBL.
 
 For sound, `scripts/render-audio.ts` renders a module to WAV. Compared with libopenmpt at the same tempo, the envelope correlates between 0.94 and 0.99. Only a few passages of *Act of Impulse* (vibrato and instrument change without a note) drop to 0.7–0.85.
 
+`scripts/screenshots.ts` renders the screenshots of the top-level README into `docs/screenshots/`: `npx vite-node scripts/screenshots.ts -- ../../docs/screenshots`.
+
 `scripts/smoke.mjs` runs the build in headless Chrome (puppeteer-core), clicks, changes songs, takes screenshots and collects console errors.
