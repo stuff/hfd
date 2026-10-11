@@ -3,7 +3,7 @@
 # (needs the "key" debugger command from hatari-debugger-key.patch)
 # ST scancodes: space 0x39, return 0x1c, cursor up 0x48, cursor down 0x50
 import sys,os
-D=sys.argv[1]; ev=sys.argv[2]
+D=os.path.abspath(sys.argv[1]); ev=sys.argv[2]
 os.makedirs(D,exist_ok=True)
 with open(os.path.join(D,'pre.ini'),'a') as pre:
     for i,e in enumerate(ev.split(',')):
